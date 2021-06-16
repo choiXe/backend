@@ -62,7 +62,7 @@ async function updateReportData() {
                             reportIdx: { S: reportObj['reportIdx'] }
                         }
                     }
-                    ddb.putItem(params, function (err, data) {
+                    ddb.putItem(params, function (err) {
                         if (err) {
                             console.log("[dailyReportTask]: Error ", err);
                         }
