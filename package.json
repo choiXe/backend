@@ -16,6 +16,8 @@
   "author": "Huey Kim, Mike Choi, Ricky Kim",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.18.0",
+    "@aws-sdk/lib-dynamodb": "^3.18.0",
     "aws-sdk": "^2.928.0",
     "axios": "^0.21.1",
     "cheerio": "^1.0.0-rc.10",
