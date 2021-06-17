@@ -8,13 +8,15 @@ const ddb = new AWS.DynamoDB();
 
 let reportObj, params;
 let totalNum = 0;
-const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=100'
+const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=100';
 
 /**
  * Parses the HTML for each published report of today
  */
 async function updateReportData() {
     let body;
+    let today = new Date().toISOString().slice(0, 10);
+
     try {
         body = await reqPromise({
             url: url,
@@ -71,8 +73,7 @@ async function updateReportData() {
             }
         }
     })
-    let today = new Date().toISOString().slice(0, 10)
-    console.log('[updateReport]: ' + today + ' ' + totalNum + " reports updated");
+    console.log('[dailyReportTask]: ' + today + ' ' + totalNum + " reports updated");
 }
 
 updateReportData().then();
