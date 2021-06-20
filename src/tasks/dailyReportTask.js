@@ -22,12 +22,11 @@ async function getSectorInfo(stockId) {
     let sBody;
 
     sBody = await axios.get(sUrl, {
-            headers: {
-                referer: 'https://finance.daum.net/quotes/A' + stockId,
-                'user-agent': 'Mozilla/5.0'
-            },
-        }
-    )
+        headers: {
+            referer: 'https://finance.daum.net/quotes/A' + stockId,
+            'user-agent': 'Mozilla/5.0'
+        },
+    })
 
     const sSector = sBody.data.wicsSectorName.replace(/ /g, '');
     if (sSector == null) {
