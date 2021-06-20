@@ -1,4 +1,4 @@
-export const wicsDict = {
+const wicsDict = {
     '전기제품': ['전자와전기제품', 'IT'],
     '전자제품': ['전자와전기제품', 'IT'],
     '소프트웨어': ['소프트웨어와서비스', 'IT'],
@@ -80,3 +80,5 @@ export const wicsDict = {
     '건강관리업체및서비스': ['건강관리장비와서비스', '건강관리'],
     '건강관리장비와용품': ['건강관리장비와서비스', '건강관리']
 };
+
+module.exports = {wicsDict};

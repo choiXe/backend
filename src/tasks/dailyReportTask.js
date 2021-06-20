@@ -1,15 +1,15 @@
-import reqPromise from 'request-promise';
-import cheerio from 'cheerio';
-import Iconv from 'iconv-lite';
-import AWS from 'aws-sdk';
+const reqPromise = require('request-promise');
+const cheerio = require('cheerio');
+const Iconv = require('iconv-lite');
+const AWS = require('aws-sdk');
 
-import {wicsDict} from '../data/wicsDictionary.js';
+const {wicsDict} = require('../data/wicsDictionary.js');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const ddb = new AWS.DynamoDB();
 
 let reportObj, params;
-const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=200';
+const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=1';
 
 /**
  * Obtains stock's WICS sector
@@ -22,19 +22,25 @@ async function getSectorInfo(stockId) {
         dBody = await reqPromise({
             url: 'https://finance.daum.net/api/quotes/A'
                 + stockId + '?summary=false&changeStatistics=true',
-            headers: {'referer': 'https://finance.daum.net/quotes/A' + stockId}
+            headers: {
+                'referer': 'https://finance.daum.net/quotes/A' + stockId
+            }
         });
-    } catch (err) {
-        console.log('[dailyReportTask]: Could not connect to Daum Finance');
+    } catch (e) {
+        console.log('[dailyReportTask]: error occurred');
+    }
+
+    let sSector;
+    try {
+        sSector = JSON.parse(dBody).wicsSectorName.replace(/ /g, '');
+    } catch (e) {
         return {
             lSector: 'X',
             mSector: 'X',
             sSector: 'X'
         }
     }
-    const sSector = JSON.parse(dBody).wicsSectorName;
     const lmSector = wicsDict[sSector];
-
     return {
         lSector: lmSector[1],
         mSector: lmSector[0],
@@ -60,7 +66,7 @@ async function updateReportData() {
 
     const $ = cheerio.load(Iconv.decode(body, 'EUC-KR'));
 
-    $('.table_style01 tbody tr').map(function () {
+    $('.table_style01 tbody tr').map(async function () {
         if ($(this).find('td:nth-child(7) > div > a').attr('href') != null) {
             let original = $(this).find('strong').text();
             if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
@@ -81,27 +87,24 @@ async function updateReportData() {
                     reportObj['firm'] = $(this).find('td:nth-child(6)').text();
                     reportObj['reportIdx'] = $(this).find('td.text_l > div > div').attr('id').substr(8, 6);
 
-                    const sectorInfo = getSectorInfo(reportObj['stockId']);
-                    reportObj['lSector'] = sectorInfo['lSector'];
-                    reportObj['mSector'] = sectorInfo['mSector'];
-                    reportObj['sSector'] = sectorInfo['sSector'];
+                    const sectorInfo = await getSectorInfo(reportObj['stockId']);
 
                     // 코스피 or 코스닥에 상장이 되어있지 않을 경우 DB에 저장 X
-                    if (!reportObj['lSector'].equals('X')) {
+                    if (!(sectorInfo['lSector'] === 'X')) {
                         params = {
-                            TableName: 'reportList',
+                            TableName: 'reportListComplete',
                             Item: {
-                                date: { S: reportObj['date'] },
-                                stockName: { S: reportObj['stockName'] },
-                                stockId: { S: reportObj['stockId'] },
-                                reportName: { S: reportObj['reportName'] },
-                                priceGoal: { S: reportObj['priceGoal'] },
-                                analyst: { S: reportObj['analyst'] },
-                                firm: { S: reportObj['firm'] },
-                                reportIdx: { S: reportObj['reportIdx'] },
-                                lSector: { S: reportObj['lSector'] },
-                                mSector: { S: reportObj['mSector'] },
-                                sSector: { S: reportObj['sSector'] }
+                                date: {S: reportObj['date']},
+                                stockName: {S: reportObj['stockName']},
+                                stockId: {S: reportObj['stockId']},
+                                reportName: {S: reportObj['reportName']},
+                                priceGoal: {S: reportObj['priceGoal']},
+                                analyst: {S: reportObj['analyst']},
+                                firm: {S: reportObj['firm']},
+                                reportIdx: {S: reportObj['reportIdx']},
+                                lSector: {S: sectorInfo['lSector']},
+                                mSector: {S: sectorInfo['mSector']},
+                                sSector: {S: sectorInfo['sSector']}
                             }
                         }
                         ddb.putItem(params, function (err) {
@@ -114,7 +117,7 @@ async function updateReportData() {
             }
         }
     })
-    console.log('[dailyReportTask]: update done');
+    console.log('[dailyReportTask]: update complete');
 }
 
 updateReportData().then();
