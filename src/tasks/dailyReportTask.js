@@ -1,4 +1,4 @@
-const reqPromise = require('request-promise');
+const axios = require('axios');
 const cheerio = require('cheerio');
 const Iconv = require('iconv-lite');
 const AWS = require('aws-sdk');
@@ -17,34 +17,32 @@ const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=
  * @return sectors WICS Sectors
  */
 async function getSectorInfo(stockId) {
-    let dBody;
-    try {
-        dBody = await reqPromise({
-            url: 'https://finance.daum.net/api/quotes/A'
-                + stockId + '?summary=false&changeStatistics=true',
-            headers: {
-                'referer': 'https://finance.daum.net/quotes/A' + stockId
-            }
-        });
-    } catch (e) {
-        console.log('[dailyReportTask]: error occurred');
-    }
+    const sUrl = 'https://finance.daum.net/api/quotes/A'
+        + stockId + '?summary=false&changeStatistics=true';
+    let sBody;
 
-    let sSector;
-    try {
-        sSector = JSON.parse(dBody).wicsSectorName.replace(/ /g, '');
-    } catch (e) {
+    sBody = await axios.get(sUrl, {
+            headers: {
+                referer: 'https://finance.daum.net/quotes/A' + stockId,
+                'user-agent': 'Mozilla/5.0'
+            },
+        }
+    )
+
+    const sSector = sBody.data.wicsSectorName.replace(/ /g, '');
+    if (sSector == null) {
         return {
             lSector: 'X',
             mSector: 'X',
             sSector: 'X'
         }
-    }
-    const lmSector = wicsDict[sSector];
-    return {
-        lSector: lmSector[1],
-        mSector: lmSector[0],
-        sSector: sSector
+    } else {
+        const lmSector = wicsDict[sSector];
+        return {
+            lSector: lmSector[1],
+            mSector: lmSector[0],
+            sSector: sSector
+        }
     }
 }
 
@@ -55,16 +53,13 @@ async function updateReportData() {
     let body;
 
     try {
-        body = await reqPromise({
-            url: url,
-            encoding: null
-        })
+        body = await axios.get(url, {responseType: 'arraybuffer'});
     } catch (err) {
         console.log('[dailyReportTask]: Could not connect to Hankyung Consensus');
         return;
     }
 
-    const $ = cheerio.load(Iconv.decode(body, 'EUC-KR'));
+    const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'));
 
     $('.table_style01 tbody tr').map(async function () {
         if ($(this).find('td:nth-child(7) > div > a').attr('href') != null) {
