@@ -9,7 +9,7 @@ AWS.config.update({region: 'ap-northeast-2'});
 const ddb = new AWS.DynamoDB();
 
 let reportObj, params;
-const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=1';
+const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=200';
 
 /**
  * Obtains stock's WICS sector
