@@ -17,16 +17,20 @@ const url = 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=
  * @return sectors WICS Sectors
  */
 async function getSectorInfo(stockId) {
+    let sBody;
     const sUrl = 'https://finance.daum.net/api/quotes/A'
         + stockId + '?summary=false&changeStatistics=true';
-    let sBody;
 
-    sBody = await axios.get(sUrl, {
-        headers: {
-            referer: 'https://finance.daum.net/quotes/A' + stockId,
-            'user-agent': 'Mozilla/5.0'
-        },
-    })
+    try {
+        sBody = await axios.get(sUrl, {
+            headers: {
+                referer: 'https://finance.daum.net/quotes/A' + stockId,
+                'user-agent': 'Mozilla/5.0'
+            },
+        })
+    } catch (e) {
+        console.log('[dailyReportTask.js]: Error in getSectorInfo');
+    }
 
     const sSector = sBody.data.wicsSectorName.replace(/ /g, '');
     if (sSector == null) {
@@ -84,35 +88,31 @@ async function updateReportData() {
                         reportObj['reportIdx'] = elem.find('td.text_l > div > div').attr('id').substr(8, 6);
 
                         const sectorInfo = await getSectorInfo(reportObj['stockId']);
-                        console.log(reportObj);
-                        console.log('sectorInfo:', sectorInfo);
 
-                        // ÏΩîÏä§Ìîº or ÏΩîÏä§Îã•Ïóê ÏÉÅÏû•Ïù¥ ÎêòÏñ¥ÏûàÏßÄ ÏïäÏùÑ Í≤ΩÏö∞ DBÏóê Ï†ÄÏû• X
-                        /*
-                         *if (!(sectorInfo['lSector'] === 'X')) {
-                         *    params = {
-                         *        TableName: 'reportListComplete',
-                         *        Item: {
-                         *            date: {S: reportObj['date']},
-                         *            stockName: {S: reportObj['stockName']},
-                         *            stockId: {S: reportObj['stockId']},
-                         *            reportName: {S: reportObj['reportName']},
-                         *            priceGoal: {S: reportObj['priceGoal']},
-                         *            analyst: {S: reportObj['analyst']},
-                         *            firm: {S: reportObj['firm']},
-                         *            reportIdx: {S: reportObj['reportIdx']},
-                         *            lSector: {S: sectorInfo['lSector']},
-                         *            mSector: {S: sectorInfo['mSector']},
-                         *            sSector: {S: sectorInfo['sSector']}
-                         *        }
-                         *    }
-                         *    ddb.putItem(params, function (err) {
-                         *        if (err) {
-                         *            console.log('[dailyReportTask]: Error ', err);
-                         *        }
-                         *    })
-                         *}
-                         */
+                        if (!(sectorInfo['lSector'] === 'X')) {
+                            params = {
+                                TableName: 'reportListComplete',
+                                Item: {
+                                    date: {S: reportObj['date']},
+                                    stockName: {S: reportObj['stockName']},
+                                    stockId: {S: reportObj['stockId']},
+                                    reportName: {S: reportObj['reportName']},
+                                    priceGoal: {S: reportObj['priceGoal']},
+                                    analyst: {S: reportObj['analyst']},
+                                    firm: {S: reportObj['firm']},
+                                    reportIdx: {S: reportObj['reportIdx']},
+                                    lSector: {S: sectorInfo['lSector']},
+                                    mSector: {S: sectorInfo['mSector']},
+                                    sSector: {S: sectorInfo['sSector']}
+                                }
+                            }
+                            console.log(params);
+                            ddb.putItem(params, function (err) {
+                                if (err) {
+                                    console.log('[dailyReportTask]: Error ', err);
+                                }
+                            })
+                        }
                     }
                 }
             }
