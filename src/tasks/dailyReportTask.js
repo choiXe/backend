@@ -59,59 +59,68 @@ async function updateReportData() {
     }
 
     const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'));
+    let p = Promise.resolve();
+    $('.table_style01 tbody tr').map(function () {
+        const elem = $(this);
+        p = p.then(async function() {
+            if (elem.find('td:nth-child(7) > div > a').attr('href') != null) {
+                let original = elem.find('strong').text();
+                if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
+                    console.log("Parsing unavailable > " + original);
+                } else {
+                    reportObj = {};
+                    reportObj['date'] = elem.find('td.first.txt_number').text();
+                    reportObj['stockName'] = original.split('(')[0];
+                    reportObj['stockId'] = original.split('(')[1].split(')')[0];
 
-    $('.table_style01 tbody tr').map(async function () {
-        if ($(this).find('td:nth-child(7) > div > a').attr('href') != null) {
-            let original = $(this).find('strong').text();
-            if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
-                console.log("Parsing unavailable > " + original);
-            } else {
-                reportObj = {};
-                reportObj['date'] = $(this).find('td.first.txt_number').text();
-                reportObj['stockName'] = original.split('(')[0];
-                reportObj['stockId'] = original.split('(')[1].split(')')[0];
+                    if (reportObj['stockId'].length === 6
+                        && !isNaN(reportObj['stockId'])
+                        && reportObj['stockName'].length <= 20) {
 
-                if (reportObj['stockId'].length === 6
-                    && !isNaN(reportObj['stockId'])
-                    && reportObj['stockName'].length <= 20) {
+                        reportObj['reportName'] = original.split(')')[1];
+                        reportObj['priceGoal'] = elem.find('td.text_r.txt_number').text().replace(/,/g, '');
+                        reportObj['analyst'] = elem.find('td:nth-child(5)').text();
+                        reportObj['firm'] = elem.find('td:nth-child(6)').text();
+                        reportObj['reportIdx'] = elem.find('td.text_l > div > div').attr('id').substr(8, 6);
 
-                    reportObj['reportName'] = original.split(')')[1];
-                    reportObj['priceGoal'] = $(this).find('td.text_r.txt_number').text().replace(/,/g, '');
-                    reportObj['analyst'] = $(this).find('td:nth-child(5)').text();
-                    reportObj['firm'] = $(this).find('td:nth-child(6)').text();
-                    reportObj['reportIdx'] = $(this).find('td.text_l > div > div').attr('id').substr(8, 6);
+                        const sectorInfo = await getSectorInfo(reportObj['stockId']);
+                        console.log(reportObj);
+                        console.log('sectorInfo:', sectorInfo);
 
-                    const sectorInfo = await getSectorInfo(reportObj['stockId']);
-
-                    // 코스피 or 코스닥에 상장이 되어있지 않을 경우 DB에 저장 X
-                    if (!(sectorInfo['lSector'] === 'X')) {
-                        params = {
-                            TableName: 'reportListComplete',
-                            Item: {
-                                date: {S: reportObj['date']},
-                                stockName: {S: reportObj['stockName']},
-                                stockId: {S: reportObj['stockId']},
-                                reportName: {S: reportObj['reportName']},
-                                priceGoal: {S: reportObj['priceGoal']},
-                                analyst: {S: reportObj['analyst']},
-                                firm: {S: reportObj['firm']},
-                                reportIdx: {S: reportObj['reportIdx']},
-                                lSector: {S: sectorInfo['lSector']},
-                                mSector: {S: sectorInfo['mSector']},
-                                sSector: {S: sectorInfo['sSector']}
-                            }
-                        }
-                        ddb.putItem(params, function (err) {
-                            if (err) {
-                                console.log('[dailyReportTask]: Error ', err);
-                            }
-                        })
+                        // ÏΩîÏä§Ìîº or ÏΩîÏä§Îã•Ïóê ÏÉÅÏû•Ïù¥ ÎêòÏñ¥ÏûàÏßÄ ÏïäÏùÑ Í≤ΩÏö∞ DBÏóê Ï†ÄÏû• X
+                        /*
+                         *if (!(sectorInfo['lSector'] === 'X')) {
+                         *    params = {
+                         *        TableName: 'reportListComplete',
+                         *        Item: {
+                         *            date: {S: reportObj['date']},
+                         *            stockName: {S: reportObj['stockName']},
+                         *            stockId: {S: reportObj['stockId']},
+                         *            reportName: {S: reportObj['reportName']},
+                         *            priceGoal: {S: reportObj['priceGoal']},
+                         *            analyst: {S: reportObj['analyst']},
+                         *            firm: {S: reportObj['firm']},
+                         *            reportIdx: {S: reportObj['reportIdx']},
+                         *            lSector: {S: sectorInfo['lSector']},
+                         *            mSector: {S: sectorInfo['mSector']},
+                         *            sSector: {S: sectorInfo['sSector']}
+                         *        }
+                         *    }
+                         *    ddb.putItem(params, function (err) {
+                         *        if (err) {
+                         *            console.log('[dailyReportTask]: Error ', err);
+                         *        }
+                         *    })
+                         *}
+                         */
                     }
                 }
             }
-        }
+        })
     })
-    console.log('[dailyReportTask]: update complete');
+    p.then(function() {
+        console.log('[dailyReportTask]: update complete');
+    })
 }
 
 updateReportData().then();
