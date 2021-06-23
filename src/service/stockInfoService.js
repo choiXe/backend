@@ -4,7 +4,7 @@ const Iconv = require('iconv-lite');
 const AWS = require('aws-sdk');
 
 AWS.config.update({region: 'ap-northeast-2'});
-const ddb = new AWS.DynamoDB();
+const docClient = new AWS.DynamoDB.DocumentClient();
 
 let stockObj;
 const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&symbol=';
@@ -41,13 +41,26 @@ async function getPastPrice(stockId) {
 }
 
 /**
- * TODO: Returns reports of company with attr: stockId
+ * Returns reports company with attr: stockId written in specific date range
  * @param stockId 6 digit number of stock
  * @param date starting date of search
  */
 async function getReports(stockId, date) {
-    const reports = [];
-    return reports;
+    const query = {
+        TableName: 'reportListComplete',
+        IndexName: "stockId-date-index",
+        KeyConditionExpression: '#id = :id and #dt >= :date',
+        ExpressionAttributeNames: {
+            '#id': 'stockId',
+            '#dt': 'date'
+        },
+        ExpressionAttributeValues: {
+            ':id': stockId,
+            ':date': date
+        }
+    };
+
+    return (await docClient.query(query).promise()).Items;
 }
 
 /**
@@ -73,7 +86,7 @@ async function getBasicInfo(stockId) {
     const stockData = body.data;
     return {
         name: stockData.name,
-        companySummary: stockData.companySummary,
+        companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
         tradePrice: stockData.tradePrice,
         changeRate: stockData.changeRate,
         marketCap: stockData.marketCap,
@@ -97,35 +110,38 @@ async function getKeyword(reportList) {
 }
 
 /**
+ * Returns average priceGoal
+ * @param reportList list of reports
+ */
+async function getAverage(reportList) {
+    let sum = 0, count = 0;
+    reportList.forEach(items => {
+        if (items.priceGoal !== 0) {
+            count++;
+            sum += parseInt(items.priceGoal);
+        }
+    })
+    return sum / count;
+}
+
+/**
  * Returns stock element
  * 섹터 선택 시 그 섹터에 속한 종목 리스트에 들어갈 element 리턴
  * @param stockId 6 digit number of stock
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockOverview(stockId, date) {
-    let avgPrice;
     stockObj = {};
 
     const reports = await getReports(stockId, date);
     const basicInfo = await getBasicInfo(stockId);
     const past30Price = await getPastPrice(stockId);
-    const keywords = await getKeyword(reports);
+    const avgPrice = await getAverage(reports);
+    // const keywords = await getKeyword(reports);
 
-    // TODO: reports 에 들어있는 데이터에서 avgPrice 구해야 함
-    avgPrice = '250000';
-
-    // TODO: for loop 사용해서 코드 짧게 만들기
-    stockObj['name'] = basicInfo.name;
-    stockObj['companySummary'] = basicInfo.companySummary;
-    stockObj['marketCap'] = basicInfo.marketCap;
-    stockObj['high52wPrice'] = basicInfo.high52wPrice;
-    stockObj['low52wPrice'] = basicInfo.low52wPrice;
-    stockObj['foreignRatio'] = basicInfo.foreignRatio;
-    stockObj['per'] = basicInfo.per;
-    stockObj['pbr'] = basicInfo.pbr;
-    stockObj['roe'] = basicInfo.roe;
-    stockObj['tradePrice'] = basicInfo.tradePrice;
-    stockObj['changeRate'] = basicInfo.changeRate;
+    for (let [key, value] of Object.entries(basicInfo)) {
+        stockObj[key] = value;
+    }
 
     if (isNaN(avgPrice)) {
         stockObj['priceAvg'] = '의견 없음';
@@ -136,13 +152,13 @@ async function getStockOverview(stockId, date) {
     }
     stockObj['expYield'] > 0 ? stockObj['recommend'] = 'O' : stockObj['recommend'] = 'X';
     stockObj['past30Price'] = past30Price;
-    stockObj['keywords'] = keywords;
+    // stockObj['keywords'] = keywords;
 
     return stockObj;
 }
 
 async function test() {
-    const a = await getStockOverview('011070', 'sampleAttribute').then();
+    const a = await getStockOverview('011070', '2021-05-01').then();
     console.log(a);
 }
 
