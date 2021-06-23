@@ -33,9 +33,9 @@ async function getPastPrice(stockId) {
     }
     const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'), {xmlMode: true});
 
-    // 날짜 | 전일종가 | 고가 | 저가 | 현재가 | 거래량
+    // 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
     $('item').each(function () {
-        prices.push($(this).attr('data').split('|')[1]);
+        prices.push($(this).attr('data').split('|')[4]);
     })
     return prices;
 }
@@ -57,7 +57,8 @@ async function getReports(stockId, date) {
         ExpressionAttributeValues: {
             ':id': stockId,
             ':date': date
-        }
+        },
+        ScanIndexForward: false
     };
 
     return (await docClient.query(query).promise()).Items;
@@ -131,6 +132,7 @@ async function getAverage(reportList) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockOverview(stockId, date) {
+    let reportList = [];
     stockObj = {};
 
     const reports = await getReports(stockId, date);
@@ -153,6 +155,18 @@ async function getStockOverview(stockId, date) {
     stockObj['expYield'] > 0 ? stockObj['recommend'] = 'O' : stockObj['recommend'] = 'X';
     stockObj['past30Price'] = past30Price;
     // stockObj['keywords'] = keywords;
+
+    for (const report of reports) {
+        reportList.push({
+            date: report.date,
+            reportName: report.reportName,
+            analyst: report.analyst,
+            priceGoal: report.priceGoal,
+            firm: report.firm,
+            reportIdx: report.reportIdx
+        })
+    }
+    stockObj['reportList'] = reportList;
 
     return stockObj;
 }
