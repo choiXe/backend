@@ -10,7 +10,7 @@ AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 let stockObj;
-const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&symbol=';
+const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&count=30&symbol=';
 
 /**
  * 종목을 클릭했을 때 나오는 상세 항목에 들어가는 정보를 밑의 순서대로 리턴
@@ -32,7 +32,7 @@ async function getPastPrice(stockId) {
     let prices = [];
 
     try {
-        body = await axios.get(pUrl + stockId + '&count=30');
+        body = await axios.get(pUrl + stockId);
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'), {xmlMode: true});
 
