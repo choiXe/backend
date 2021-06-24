@@ -22,6 +22,7 @@ const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=
 
 /**
  * Returns array that contains stock prices of the past 30 days
+ * 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
  * TODO: front-end 상에서 주식 차트 바로 그릴 수 있으면 필요 없는 function 임
  * @param stockId 6 digit number of stock
  */
@@ -31,12 +32,9 @@ async function getPastPrice(stockId) {
 
     try {
         body = await axios.get(pUrl + stockId + '&count=30');
-    } catch (error) {
-        console.log('[stockInfoService]: Error occurred in getPastPrice')
-    }
+    } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'), {xmlMode: true});
 
-    // 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
     $('item').each(function () {
         prices.push($(this).attr('data').split('|')[4]);
     })
@@ -63,7 +61,6 @@ async function getReports(stockId, date) {
         },
         ScanIndexForward: false
     };
-
     return (await docClient.query(query).promise()).Items;
 }
 
@@ -83,9 +80,7 @@ async function getBasicInfo(stockId) {
                 'user-agent': 'Mozilla/5.0'
             },
         });
-    } catch (e) {
-        console.log('[stockInfoService]: Error in getBasicInfo');
-    }
+    } catch (e) { console.log('[stockInfoService]: Error in getBasicInfo'); }
 
     const stockData = body.data;
     return {
@@ -152,29 +147,28 @@ async function getInvestor(stockId) {
 
     try {
         body = await axios.get(generateUrl(kUrl, params));
-    } catch (error) { console.log('Error'); }
-
-    params = {
-        bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
-        isuCd: body.data.block1[0].full_code,
-        strtDd: startDate.toISOString().slice(0, 10).replace(/-/g,''),
-        endDd: endDate.toISOString().slice(0, 10).replace(/-/g,''),
-        askBid: 3,
-        trdVolVal: 2
-    }
+        params = {
+            bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
+            isuCd: body.data.block1[0].full_code,
+            strtDd: startDate.toISOString().slice(0, 10).replace(/-/g,''),
+            endDd: endDate.toISOString().slice(0, 10).replace(/-/g,''),
+            askBid: 3,
+            trdVolVal: 2
+        }
+    } catch (error) { console.log('[stockInfoService]: Error in getInvestor *ISU'); }
 
     try {
         body = await axios.get(generateUrl(kUrl, params));
-    } catch (error) { console.log('Error'); }
+        for (const info of body.data.output) {
+            investInfo.push({
+                date: info.TRD_DD,
+                individual: numToKR(info.TRDVAL3),
+                foreign: numToKR(info.TRDVAL4),
+                institutions: numToKR(info.TRDVAL1)
+            })
+        }
+    } catch (error) { console.log('[stockInfoService]: Error in getInvestor'); }
 
-    for (const info of body.data.output) {
-        investInfo.push({
-            date: info.TRD_DD,
-            individual: numToKR(info.TRDVAL3),
-            foreign: numToKR(info.TRDVAL4),
-            institutions: numToKR(info.TRDVAL1)
-        })
-    }
     return investInfo;
 }
 
