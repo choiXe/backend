@@ -1,6 +1,5 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const Iconv = require('iconv-lite');
 const AWS = require('aws-sdk');
 
 const {numToKorean} = require('num-to-korean');
@@ -34,7 +33,7 @@ async function getPastPrice(stockId) {
     try {
         body = await axios.get(pUrl + stockId);
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
-    const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'), {xmlMode: true});
+    const $ = cheerio.load(body.data, {xmlMode: true});
 
     $('item').each(function () {
         prices.push($(this).attr('data').split('|')[4]);

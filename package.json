@@ -19,7 +19,6 @@
     "aws-sdk": "^2.928.0",
     "axios": "^0.21.1",
     "cheerio": "^1.0.0-rc.10",
-    "iconv-lite": "^0.6.3",
     "num-to-korean": "^0.4.3"
   }
 }

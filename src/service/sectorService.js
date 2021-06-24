@@ -1,5 +1,4 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 
 AWS.config.update({region: 'ap-northeast-2'});
