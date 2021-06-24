@@ -3,6 +3,9 @@ const cheerio = require('cheerio');
 const Iconv = require('iconv-lite');
 const AWS = require('aws-sdk');
 
+const {numToKorean} = require('num-to-korean');
+const generateUrl = require('../tools/urlGenerator.js');
+
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 
@@ -108,6 +111,12 @@ async function getKeyword(reportList) {
     // KoNLPy (파이썬 한국어 NLP) 사용해서 키워드 가져오면 될 듯
     // AWS Lambda 써서 파이썬으로 코드 짜고 여기서 호출해서 값 받아오면 됨
     // 띄어쓰기 없어도 잘 추출하니까 reportList 보낼 때 안에 있는 리포트 제목들의 공백 전부 제거하고 보내는게 나을듯
+
+    const reportTitles = [];
+    for (const report of reportList) {
+        reportTitles.push(report.reportName.replace(/ /g,''));
+    }
+    return reportTitles;
 }
 
 /**
@@ -126,6 +135,74 @@ async function getAverage(reportList) {
 }
 
 /**
+ * Returns investor statistics of past 20 trading days (개인, 외국인, 기관)
+ * @param stockId 6 digit number of stock
+ */
+async function getInvestor(stockId) {
+    let body, investInfo = [];
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 21);
+    const kUrl = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
+    let params = {
+        bld: 'dbms/comm/finder/finder_listisu',
+        searchText: stockId,
+        mktsel: 'ALL'
+    };
+
+    try {
+        body = await axios.get(generateUrl(kUrl, params));
+    } catch (error) { console.log('Error'); }
+
+    params = {
+        bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
+        isuCd: body.data.block1[0].full_code,
+        strtDd: startDate.toISOString().slice(0, 10).replace(/-/g,''),
+        endDd: endDate.toISOString().slice(0, 10).replace(/-/g,''),
+        askBid: 3,
+        trdVolVal: 2
+    }
+
+    try {
+        body = await axios.get(generateUrl(kUrl, params));
+    } catch (error) { console.log('Error'); }
+
+    for (const info of body.data.output) {
+        investInfo.push({
+            date: info.TRD_DD,
+            individual: numToKR(info.TRDVAL3),
+            foreign: numToKR(info.TRDVAL4),
+            institutions: numToKR(info.TRDVAL1)
+        })
+    }
+    return investInfo;
+}
+
+/**
+ * Converts str(number) to KR unit
+ * @param number a number
+ */
+function numToKR(number) {
+    if (number === '0' ||
+        (number.indexOf('-') !== -1 && number.length < 6)) return '-';
+
+    let num, isNegative = false;
+    if (number.indexOf('-') !== -1) {
+        isNegative = true;
+        number = number.substr(1);
+    }
+    num = numToKorean(parseInt(number.replace(/,/g,'')), 'mixed');
+    num.indexOf('억') !== -1 ? num = num.substring(0, num.indexOf('억')) + '억'
+        : num = num.substring(0, num.indexOf('만')) + '만';
+
+    if (isNegative) {
+        return '-' + num;
+    } else {
+        return num;
+    }
+}
+
+/**
  * Returns stock element
  * 섹터 선택 시 그 섹터에 속한 종목 리스트에 들어갈 element 리턴
  * @param stockId 6 digit number of stock
@@ -139,7 +216,8 @@ async function getStockOverview(stockId, date) {
     const basicInfo = await getBasicInfo(stockId);
     const past30Price = await getPastPrice(stockId);
     const avgPrice = await getAverage(reports);
-    // const keywords = await getKeyword(reports);
+    const keywords = await getKeyword(reports);
+    const invStatistics = await getInvestor(stockId);
 
     for (let [key, value] of Object.entries(basicInfo)) {
         stockObj[key] = value;
@@ -154,7 +232,7 @@ async function getStockOverview(stockId, date) {
     }
     stockObj['expYield'] > 0 ? stockObj['recommend'] = 'O' : stockObj['recommend'] = 'X';
     stockObj['past30Price'] = past30Price;
-    // stockObj['keywords'] = keywords;
+    stockObj['keywords'] = keywords;
 
     for (const report of reports) {
         reportList.push({
@@ -167,6 +245,7 @@ async function getStockOverview(stockId, date) {
         })
     }
     stockObj['reportList'] = reportList;
+    stockObj['invStatistics'] = invStatistics;
 
     return stockObj;
 }
