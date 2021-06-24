@@ -1,21 +1,11 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const Iconv = require('iconv-lite');
 const AWS = require('aws-sdk');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 
-let sectorObj;
-let percentList = [];
-
-/**
- * Returns average percentage yield
- * @param reportList list of stock reports
- */
-async function getAverage(reportList) {
-
-}
+let sectorObj, url;
 
 /**
  * Returns list of priceGoals of stocks included in the sector
@@ -24,7 +14,7 @@ async function getAverage(reportList) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockList(sector, date) {
-    let sortedList = {};
+    let body, sList = {};
     const query = {
         TableName: 'reportListComplete',
         IndexName: 'lSector-date-index',
@@ -42,15 +32,34 @@ async function getStockList(sector, date) {
     };
     const priceList = (await docClient.query(query).promise()).Items;
 
-    priceList.forEach(item => {
+    for (const item of priceList) {
         if (item.priceGoal !== '0') {
-            if (!sortedList[item.stockName]) {
-                sortedList[item.stockName] = [];
+            if (!sList[item.stockName]) {
+                url = 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=' + item.stockId;
+                try {
+                    body = await axios.get(url);
+                } catch (e) { console.log('[sectorService]: Error in getStockList'); }
+
+                sList[item.stockName] = {
+                    stockId: item.stockId,
+                    tradePrice: body.data.now,
+                    changeRate: body.data.rate,
+                    price: []
+                };
             }
-            sortedList[item.stockName].push(item.priceGoal);
+            sList[item.stockName].price.push(parseInt(item.priceGoal));
         }
-    })
-    return sortedList;
+    }
+
+    for (const i in sList) {
+        sList[i]['priceAvg'] = Math.round(sList[i].price
+            .reduce((a, b) => a + b, 0) / sList[i].price.length);
+        sList[i]['expYield'] = (sList[i]['priceAvg'] / sList[i]['tradePrice'] - 1) * 100;
+        sList[i]['expYield'] > 0 ? sList[i]['recommend'] = 'O' : sList[i]['recommend'] = 'X';
+        delete sList[i]['price'];
+    }
+
+    return sList;
 }
 
 /**
@@ -59,12 +68,24 @@ async function getStockList(sector, date) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getSectorOverview(sector, date) {
-    const priceGoalList = await getStockList(sector, date);
-    return priceGoalList;
+    let avgYield = 0.0, avgChange = 0.0;
+    sectorObj = {};
+    sectorObj['stockList'] = await getStockList(sector, date);
+    const listSize = Object.keys(sectorObj['stockList']).length;
+
+    for (let i in sectorObj['stockList']) {
+        avgYield += sectorObj['stockList'][i]['expYield'];
+        avgChange += sectorObj['stockList'][i]['changeRate'];
+    }
+
+    sectorObj['avgChange'] = avgChange / listSize;
+    sectorObj['avgYield'] = avgYield / listSize;
+
+    return sectorObj;
 }
 
 async function test() {
-    const a = await getSectorOverview('IT', '2021-05-01').then();
+    const a = await getSectorOverview('IT', '2021-06-01').then();
     console.log(a);
 }
 
