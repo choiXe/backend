@@ -4,7 +4,34 @@ const AWS = require('aws-sdk');
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 
-let sectorObj, url;
+let sectorObj;
+const url = 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=';
+
+/**
+ * Returns recommendation in score (Scale of -100 ~ 100)
+ * @param expYield expected profit yield
+ * @param consensusCount number of reports backing up priceGoal
+ */
+async function getScore(expYield, consensusCount) {
+    let a, b;
+    expYield >= 50 ? a = 10 : a = Math.abs(expYield) / 5;
+    consensusCount >= 10 ? b = 10 : b = consensusCount;
+
+    switch (consensusCount) {
+        case 1:
+            b -= 4; break;
+        case 2:
+            b -= 2; break;
+        case 3:
+            break;
+        case 4:
+            b += 1.5; break;
+        default:
+            b += 3;
+    }
+
+    return Math.sign(expYield) * Math.round(a + b) * 5;
+}
 
 /**
  * Returns list of priceGoals of stocks included in the sector
@@ -13,11 +40,13 @@ let sectorObj, url;
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockList(sector, date) {
-    let body, sList = {};
+    let body;
+    let sList = {}, yList = {};
+    let avgYield = 0.0;
     const query = {
         TableName: 'reportListComplete',
         IndexName: 'lSector-date-index',
-        ProjectionExpression: '#dt, stockName, stockId, priceGoal',
+        ProjectionExpression: '#dt, stockName, stockId, priceGoal, sSector',
         KeyConditionExpression: '#sector = :sector and #dt >= :date',
         ExpressionAttributeNames: {
             '#sector': 'lSector',
@@ -29,18 +58,18 @@ async function getStockList(sector, date) {
         },
         ScanIndexForward: false
     };
-    const priceList = (await docClient.query(query).promise()).Items;
 
+    const priceList = (await docClient.query(query).promise()).Items;
     for (const item of priceList) {
         if (item.priceGoal !== '0') {
             if (!sList[item.stockName]) {
-                url = 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=' + item.stockId;
                 try {
-                    body = await axios.get(url);
+                    body = await axios.get(url + item.stockId);
                 } catch (e) { console.log('[sectorService]: Error in getStockList'); }
 
                 sList[item.stockName] = {
                     stockId: item.stockId,
+                    sSector: item.sSector,
                     tradePrice: body.data.now,
                     changeRate: body.data.rate,
                     price: []
@@ -53,11 +82,35 @@ async function getStockList(sector, date) {
     for (const i in sList) {
         sList[i]['priceAvg'] = Math.round(sList[i].price
             .reduce((a, b) => a + b, 0) / sList[i].price.length);
-        sList[i]['expYield'] = (sList[i]['priceAvg'] / sList[i]['tradePrice'] - 1) * 100;
-        sList[i]['expYield'] > 0 ? sList[i]['recommend'] = 'O' : sList[i]['recommend'] = 'X';
+        sList[i]['expYield'] = Math.round((sList[i]['priceAvg'] /
+            sList[i]['tradePrice'] - 1) * 1000) / 10;
+        avgYield += sList[i]['expYield'];
+        sList[i]['cCount'] = sList[i]['price'].length;
+
+        // 각 섹터당 해당하는 종목 추가
+        if (!yList[sList[i].sSector]) {
+            yList[sList[i].sSector] = [];
+        }
+        yList[sList[i].sSector].push(sList[i]['expYield']);
+        sList[i]['score'] = await getScore(sList[i]['expYield'], sList[i]['cCount']);
         delete sList[i]['price'];
     }
 
+    // 섹터별로 expYield 구하기
+    for (const i in yList) {
+        yList[i] = yList[i].reduce((a, b) => a + b, 0) / yList[i].length;
+    }
+
+    // expYield 가 제일 높은 하위 3개 섹터 분류 구하기
+    const topList = Object.keys(yList)
+        .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
+    sList['top3List'] = {
+        [topList[0]]: yList[topList[0]],
+        [topList[1]]: yList[topList[1]],
+        [topList[2]]: yList[topList[2]]
+    }
+
+    sList['avgYield'] = avgYield / Object.keys(sList).length;
     return sList;
 }
 
@@ -67,19 +120,12 @@ async function getStockList(sector, date) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getSectorOverview(sector, date) {
-    let avgYield = 0.0, avgChange = 0.0;
     sectorObj = {};
     sectorObj['stockList'] = await getStockList(sector, date);
-    const listSize = Object.keys(sectorObj['stockList']).length;
-
-    for (let i in sectorObj['stockList']) {
-        avgYield += sectorObj['stockList'][i]['expYield'];
-        avgChange += sectorObj['stockList'][i]['changeRate'];
-    }
-
-    sectorObj['avgChange'] = avgChange / listSize;
-    sectorObj['avgYield'] = avgYield / listSize;
-
+    sectorObj['avgYield'] = sectorObj['stockList']['avgYield'];
+    sectorObj['top3List'] = sectorObj['stockList']['top3List'];
+    delete sectorObj['stockList']['avgYield'];
+    delete sectorObj['stockList']['top3List'];
     return sectorObj;
 }
 
