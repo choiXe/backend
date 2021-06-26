@@ -4,12 +4,14 @@ const AWS = require('aws-sdk');
 
 const {numToKorean} = require('num-to-korean');
 const generateUrl = require('../tools/urlGenerator.js');
+const getScore = require('./scoreService.js');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
+axios.defaults.timeout = 1500;
 
 let stockObj;
-const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&count=30&symbol=';
+const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&count=65&symbol=';
 
 /**
  * 종목을 클릭했을 때 나오는 상세 항목에 들어가는 정보를 밑의 순서대로 리턴
@@ -21,13 +23,13 @@ const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=
  */
 
 /**
- * Returns array that contains stock prices of the past 30 days
+ * Returns stock data of past 3 months
  * 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
  * TODO: front-end 상에서 주식 차트 바로 그릴 수 있으면 필요 없는 function 임
  * @param stockId 6 digit number of stock
  */
-async function getPastPrice(stockId) {
-    let body;
+async function getPastData(stockId) {
+    let body, tmp;
     let prices = [];
 
     try {
@@ -36,7 +38,15 @@ async function getPastPrice(stockId) {
     const $ = cheerio.load(body.data, {xmlMode: true});
 
     $('item').each(function () {
-        prices.push($(this).attr('data').split('|')[4]);
+        tmp = $(this).attr('data').split('|');
+        prices.push({
+            date: tmp[0].substr(0, 4) + '-' + tmp[0].substr(4, 2) + '-' + tmp[0].substr(6),
+            start: parseInt(tmp[1]),
+            high: parseInt(tmp[2]),
+            low: parseInt(tmp[3]),
+            end: parseInt(tmp[4]),
+            volume: parseInt(tmp[5])
+        })
     })
     return prices;
 }
@@ -81,21 +91,23 @@ async function getBasicInfo(stockId) {
                 'user-agent': 'Mozilla/5.0'
             },
         });
-    } catch (e) { console.log('[stockInfoService]: Error in getBasicInfo'); }
-
-    const stockData = body.data;
-    return {
-        name: stockData.name,
-        companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
-        tradePrice: stockData.tradePrice,
-        changeRate: stockData.changeRate,
-        marketCap: stockData.marketCap,
-        high52wPrice: stockData.high52wPrice,
-        low52wPrice: stockData.low52wPrice,
-        foreignRatio: stockData.foreignRatio,
-        per: stockData.per,
-        pbr: stockData.pbr,
-        roe: (stockData.eps / stockData.bps) * 100.0
+        const stockData = body.data;
+        return {
+            name: stockData.name,
+            companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
+            tradePrice: stockData.tradePrice,
+            changeRate: round2Deci(stockData.changeRate * 100),
+            marketCap: stockData.marketCap,
+            high52wPrice: stockData.high52wPrice,
+            low52wPrice: stockData.low52wPrice,
+            foreignRatio: stockData.foreignRatio,
+            per: stockData.per,
+            pbr: stockData.pbr,
+            roe: round2Deci((stockData.eps / stockData.bps) * 100.0)
+        }
+    } catch (e) {
+        console.log('[stockInfoService]: Error in getBasicInfo');
+        return false;
     }
 }
 
@@ -104,30 +116,7 @@ async function getBasicInfo(stockId) {
  * @param reportList list of reports
  */
 async function getKeyword(reportList) {
-    // KoNLPy (파이썬 한국어 NLP) 사용해서 키워드 가져오면 될 듯
-    // AWS Lambda 써서 파이썬으로 코드 짜고 여기서 호출해서 값 받아오면 됨
-    // 띄어쓰기 없어도 잘 추출하니까 reportList 보낼 때 안에 있는 리포트 제목들의 공백 전부 제거하고 보내는게 나을듯
-
-    const reportTitles = [];
-    for (let i=0; i<reportList.length; i++) {
-        reportTitles.push(reportList[i].reportName.replace(/ /g,''));
-    }
-    return reportTitles;
-}
-
-/**
- * Returns average priceGoal
- * @param reportList list of reports
- */
-async function getAverage(reportList) {
-    let sum = 0, count = 0;
-    reportList.forEach(items => {
-        if (items.priceGoal !== 0) {
-            count++;
-            sum += parseInt(items.priceGoal);
-        }
-    })
-    return sum / count;
+    // 보류
 }
 
 /**
@@ -156,16 +145,34 @@ async function getInvestor(stockId) {
             askBid: 3,
             trdVolVal: 2
         }
-    } catch (error) { console.log('[stockInfoService]: Error in getInvestor *ISU'); }
+    } catch (error) {
+        // KRX 홈페이지 점검 중일 때 timeout 걸고 종료
+        if (error.code === 'ECONNABORTED') {
+            return {
+                date: endDate.toISOString().slice(0, 10),
+                individual: '',
+                foreign: '점검중',
+                institutions: ''
+            }
+        }
+        console.log('[stockInfoService]: Error in getInvestor *ISU');
+    }
 
     try {
         body = await axios.get(generateUrl(kUrl, params));
         body.data.output.forEach(info => {
             investInfo.push({
-                date: info.TRD_DD,
-                individual: numToKR(info.TRDVAL3),
-                foreign: numToKR(info.TRDVAL4),
-                institutions: numToKR(info.TRDVAL1)
+                date: info.TRD_DD.replace(/\//g,'-'),
+                inKR: {
+                    individual: numToKR(info.TRDVAL3),
+                    foreign: numToKR(info.TRDVAL4),
+                    institutions: numToKR(info.TRDVAL1)
+                },
+                inVal: {
+                    individual: parseInt(info.TRDVAL3.replace(/,/g,'')),
+                    foreign: parseInt(info.TRDVAL4.replace(/,/g,'')),
+                    institutions: parseInt(info.TRDVAL1.replace(/,/g,''))
+                }
             })
         })
     } catch (error) { console.log('[stockInfoService]: Error in getInvestor'); }
@@ -198,6 +205,29 @@ function numToKR(number) {
 }
 
 /**
+ * Returns rounded up number with 2 decimal place
+ * @param number value
+ */
+function round2Deci(number) {
+    return Math.round(number * 100) / 100;
+}
+
+/**
+ * Returns average priceGoal
+ * @param reportList list of reports
+ */
+async function getAverage(reportList) {
+    let sum = 0, count = 0;
+    reportList.forEach(items => {
+        if (items.priceGoal !== '0') {
+            count++;
+            sum += parseInt(items.priceGoal);
+        }
+    })
+    return [sum / count, count];
+}
+
+/**
  * Returns stock element
  * 섹터 선택 시 그 섹터에 속한 종목 리스트에 들어갈 element 리턴
  * @param stockId 6 digit number of stock
@@ -208,33 +238,36 @@ async function getStockOverview(stockId, date) {
 
     const reports = await getReports(stockId, date);
     const basicInfo = await getBasicInfo(stockId);
-    const past30Price = await getPastPrice(stockId);
+    if (!basicInfo) return '존재하지 않는 종목입니다';
+    const pastData = await getPastData(stockId);
     const avgPrice = await getAverage(reports);
-    const keywords = await getKeyword(reports);
     const invStatistics = await getInvestor(stockId);
+    // const keywords = await getKeyword(reports);
 
     for (let [key, value] of Object.entries(basicInfo)) {
         stockObj[key] = value;
     }
 
-    if (isNaN(avgPrice)) {
+    if (isNaN(avgPrice[0])) {
         stockObj['priceAvg'] = '의견 없음';
         stockObj['expYield'] = 0;
     } else {
-        stockObj['priceAvg'] = Math.round(avgPrice);
-        stockObj['expYield'] = stockObj['priceAvg'] / stockObj['tradePrice'] - 1;
+        stockObj['priceAvg'] = Math.round(avgPrice[0]);
+        stockObj['expYield'] = round2Deci((stockObj['priceAvg'] /
+            stockObj['tradePrice'] - 1) * 100);
     }
-    stockObj['expYield'] > 0 ? stockObj['recommend'] = 'O' : stockObj['recommend'] = 'X';
-    stockObj['past30Price'] = past30Price;
-    stockObj['keywords'] = keywords;
+
+    stockObj['recommend'] = getScore(stockObj['expYield'], avgPrice[1]);
+    stockObj['pastData'] = pastData;
     stockObj['reportList'] = reports;
     stockObj['invStatistics'] = invStatistics;
+    // stockObj['keywords'] = keywords;
 
     return stockObj;
 }
 
 async function test() {
-    const a = await getStockOverview('011070', '2021-05-01').then();
+    const a = await getStockOverview('011070', '2021-06-01').then();
     console.log(a);
 }
 

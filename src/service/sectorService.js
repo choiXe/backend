@@ -1,37 +1,12 @@
 const axios = require('axios');
 const AWS = require('aws-sdk');
+const getScore = require('./scoreService.js');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 let sectorObj;
 const url = 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=';
-
-/**
- * Returns recommendation in score (Scale of -100 ~ 100)
- * @param expYield expected profit yield
- * @param consensusCount number of reports backing up priceGoal
- */
-async function getScore(expYield, consensusCount) {
-    let a, b;
-    expYield >= 50 ? a = 10 : a = Math.abs(expYield) / 5;
-    consensusCount >= 10 ? b = 10 : b = consensusCount;
-
-    switch (consensusCount) {
-        case 1:
-            b -= 4; break;
-        case 2:
-            b -= 2; break;
-        case 3:
-            break;
-        case 4:
-            b += 1.5; break;
-        default:
-            b += 3;
-    }
-
-    return Math.sign(expYield) * Math.round(a + b) * 5;
-}
 
 /**
  * Returns list of priceGoals of stocks included in the sector
@@ -92,7 +67,7 @@ async function getStockList(sector, date) {
             yList[sList[i].sSector] = [];
         }
         yList[sList[i].sSector].push(sList[i]['expYield']);
-        sList[i]['score'] = await getScore(sList[i]['expYield'], sList[i]['cCount']);
+        sList[i]['score'] = getScore(sList[i]['expYield'], sList[i]['cCount']);
         delete sList[i]['price'];
     }
 
