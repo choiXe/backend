@@ -1,5 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const parser = require('xml2js').parseString;
 const AWS = require('aws-sdk');
 
 const {numToKorean} = require('num-to-korean');
@@ -9,6 +10,12 @@ const getScore = require('./scoreService.js');
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 axios.defaults.timeout = 1500;
+
+const month = {
+    Jan: '01', Feb: '02', Mar: '03', Apr: '04',
+    May: '05', Jun: '06', Jul: '07', Aug: '08',
+    Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+}
 
 let stockObj;
 const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&count=65&symbol=';
@@ -97,7 +104,7 @@ async function getBasicInfo(stockId) {
             companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
             tradePrice: stockData.tradePrice,
             changeRate: round2Deci(stockData.changeRate * 100),
-            marketCap: stockData.marketCap,
+            marketCap: numToKR(stockData.marketCap + '').replace('+', ''),
             high52wPrice: stockData.high52wPrice,
             low52wPrice: stockData.low52wPrice,
             foreignRatio: stockData.foreignRatio,
@@ -109,6 +116,35 @@ async function getBasicInfo(stockId) {
         console.log('[stockInfoService]: Error in getBasicInfo');
         return false;
     }
+}
+
+/**
+ * Return news related to stock
+ * @param stockName
+ * @returns {Promise<*[]>}
+ */
+async function getNews(stockName) {
+    let body, a;
+    let newsList = [];
+    const url = 'https://news.google.com/rss/search?q=' +
+        stockName + '&hl=ko&gl=KR&ceid=KR%3Ako';
+    try {
+        body = await axios.get(encodeURI(url));
+        parser(body.data, function (err, res) {
+            body = res.rss.channel[0].item;
+        })
+    } catch (e) { console.log('[stockInfoService]: Error from getNews'); }
+
+    body.forEach(item => {
+        a = item.pubDate[0].split(' ');
+        newsList.push({
+            title: item.title[0].split(' - ' + item.source[0]['_'])[0],
+            date: a[3] + '-' + month[a[2]] + '-' + a[1],
+            source: item.source[0]['_'],
+            link: item.link[0]
+        })
+    })
+    return newsList;
 }
 
 /**
@@ -261,6 +297,7 @@ async function getStockOverview(stockId, date) {
     stockObj['pastData'] = pastData;
     stockObj['reportList'] = reports;
     stockObj['invStatistics'] = invStatistics;
+    stockObj['news'] = await getNews(basicInfo['name']);
     // stockObj['keywords'] = keywords;
 
     return stockObj;
