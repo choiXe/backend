@@ -4,9 +4,9 @@ const getScore = require('./scoreService.js');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
+const {naverApiUrl} = require('../tools/urlGenerator.js');
 
 let sectorObj;
-const url = 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=';
 
 /**
  * Returns list of priceGoals of stocks included in the sector
@@ -39,7 +39,7 @@ async function getStockList(sector, date) {
         if (item.priceGoal !== '0') {
             if (!sList[item.stockName]) {
                 try {
-                    body = await axios.get(url + item.stockId);
+                    body = await axios.get(naverApiUrl(item.stockId));
                 } catch (e) { console.log('[sectorService]: Error in getStockList'); }
 
                 sList[item.stockName] = {

@@ -4,35 +4,18 @@ const parser = require('xml2js').parseString;
 const AWS = require('aws-sdk');
 
 const {numToKorean} = require('num-to-korean');
-const generateUrl = require('../tools/urlGenerator.js');
+const {month} = require('../data/constants.js');
 const getScore = require('./scoreService.js');
+const {daumParams, newsUrl,
+    pastDataUrl, investorUrl} = require('../tools/urlGenerator.js');
 
 AWS.config.update({region: 'ap-northeast-2'});
 const docClient = new AWS.DynamoDB.DocumentClient();
 axios.defaults.timeout = 1500;
 
-const month = {
-    Jan: '01', Feb: '02', Mar: '03', Apr: '04',
-    May: '05', Jun: '06', Jul: '07', Aug: '08',
-    Sep: '09', Oct: '10', Nov: '11', Dec: '12'
-}
-
-let stockObj;
-const pUrl = 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&count=65&symbol=';
-
-/**
- * 종목을 클릭했을 때 나오는 상세 항목에 들어가는 정보를 밑의 순서대로 리턴
- *
- * 종목이름, 종목정보, 현재가, 변동률, 시가총액
- * 52주 최고/최저가, 외국인소진률, PER, PBR, ROE
- * 애널리스트 평균가, 상승여력, 추천여부, 일별 가격 (1달)
- * 키워드, 리포트 리스트, 매매동향
- */
-
 /**
  * Returns stock data of past 3 months
  * 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
- * TODO: front-end 상에서 주식 차트 바로 그릴 수 있으면 필요 없는 function 임
  * @param stockId 6 digit number of stock
  */
 async function getPastData(stockId) {
@@ -40,14 +23,15 @@ async function getPastData(stockId) {
     let prices = [];
 
     try {
-        body = await axios.get(pUrl + stockId);
+        body = await axios.get(pastDataUrl(stockId, 65));
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
     $('item').each(function () {
         tmp = $(this).attr('data').split('|');
         prices.push({
-            date: tmp[0].substr(0, 4) + '-' + tmp[0].substr(4, 2) + '-' + tmp[0].substr(6),
+            date: tmp[0].substr(0, 4) + '-' +
+                tmp[0].substr(4, 2) + '-' + tmp[0].substr(6),
             start: parseInt(tmp[1]),
             high: parseInt(tmp[2]),
             low: parseInt(tmp[3]),
@@ -83,28 +67,25 @@ async function getReports(stockId, date) {
 }
 
 /**
- * Returns 기업정보, 현재가, 시가총액, 52주 최고/최저가, 외국인 소진률, PER, PBR, ROE
+ * Returns basic information of the stock
  * @param stockId 6 digit number of stock
  */
 async function getBasicInfo(stockId) {
     let body;
-    const url = 'https://finance.daum.net/api/quotes/A'
-        + stockId + '?summary=false&changeStatistics=true';
+    const params = daumParams(stockId);
 
     try {
-        body = await axios.get(url, {
-            headers: {
-                referer: 'https://finance.daum.net/quotes/A' + stockId,
-                'user-agent': 'Mozilla/5.0'
-            },
+        body = await axios.get(params[0], {
+            headers: params[1],
         });
         const stockData = body.data;
         return {
             name: stockData.name,
+            code: stockData.code,
             companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
             tradePrice: stockData.tradePrice,
             changeRate: round2Deci(stockData.changeRate * 100),
-            marketCap: numToKR(stockData.marketCap + '').replace('+', ''),
+            marketCap: numToKR(stockData.marketCap).replace('+', ''),
             high52wPrice: stockData.high52wPrice,
             low52wPrice: stockData.low52wPrice,
             foreignRatio: stockData.foreignRatio,
@@ -120,16 +101,14 @@ async function getBasicInfo(stockId) {
 
 /**
  * Return news related to stock
- * @param stockName
- * @returns {Promise<*[]>}
+ * @param stockName name of the stock
  */
 async function getNews(stockName) {
     let body, a;
     let newsList = [];
-    const url = 'https://news.google.com/rss/search?q=' +
-        stockName + '&hl=ko&gl=KR&ceid=KR%3Ako';
+
     try {
-        body = await axios.get(encodeURI(url));
+        body = await axios.get(newsUrl(stockName));
         parser(body.data, function (err, res) {
             body = res.rss.channel[0].item;
         })
@@ -148,54 +127,15 @@ async function getNews(stockName) {
 }
 
 /**
- * TODO: Returns main keywords from reportList
- * @param reportList list of reports
- */
-async function getKeyword(reportList) {
-    // 보류
-}
-
-/**
  * Returns investor statistics of past 20 trading days (개인, 외국인, 기관)
- * @param stockId 6 digit number of stock
+ * @param stockISU isu code of stock
  */
-async function getInvestor(stockId) {
+async function getInvestor(stockISU) {
     let body, investInfo = [];
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 21);
-    const kUrl = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
-    let params = {
-        bld: 'dbms/comm/finder/finder_listisu',
-        searchText: stockId,
-        mktsel: 'ALL'
-    };
+    const date = new Date().toISOString().slice(0, 10);
 
     try {
-        body = await axios.get(generateUrl(kUrl, params));
-        params = {
-            bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
-            isuCd: body.data.block1[0].full_code,
-            strtDd: startDate.toISOString().slice(0, 10).replace(/-/g,''),
-            endDd: endDate.toISOString().slice(0, 10).replace(/-/g,''),
-            askBid: 3,
-            trdVolVal: 2
-        }
-    } catch (error) {
-        // KRX 홈페이지 점검 중일 때 timeout 걸고 종료
-        if (error.code === 'ECONNABORTED') {
-            return {
-                date: endDate.toISOString().slice(0, 10),
-                individual: '',
-                foreign: '점검중',
-                institutions: ''
-            }
-        }
-        console.log('[stockInfoService]: Error in getInvestor *ISU');
-    }
-
-    try {
-        body = await axios.get(generateUrl(kUrl, params));
+        body = await axios.get(investorUrl(stockISU));
         body.data.output.forEach(info => {
             investInfo.push({
                 date: info.TRD_DD.replace(/\//g,'-'),
@@ -211,16 +151,27 @@ async function getInvestor(stockId) {
                 }
             })
         })
-    } catch (error) { console.log('[stockInfoService]: Error in getInvestor'); }
+    } catch (error) {
+        if (error.code === 'ECONNABORTED') {
+            return {
+                date: date,
+                individual: '',
+                foreign: '점검중',
+                institutions: ''
+            }
+        }
+        console.log('[stockInfoService]: Could not connect to KRX');
+    }
 
     return investInfo;
 }
 
 /**
- * Converts str(number) to KR unit
+ * Converts number to KR unit
  * @param number a number
  */
 function numToKR(number) {
+    number = number.toString();
     if (number === '0' ||
         (number.indexOf('-') !== -1 && number.length < 6)) return '-';
 
@@ -253,11 +204,12 @@ function round2Deci(number) {
  * @param reportList list of reports
  */
 async function getAverage(reportList) {
-    let sum = 0, count = 0;
-    reportList.forEach(items => {
-        if (items.priceGoal !== '0') {
+    let sum = 0, count = 0, tmp;
+    reportList.forEach(item => {
+        tmp = parseInt(item.priceGoal);
+        if (tmp !== 0) {
+            sum += tmp;
             count++;
-            sum += parseInt(items.priceGoal);
         }
     })
     return [sum / count, count];
@@ -270,35 +222,36 @@ async function getAverage(reportList) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockOverview(stockId, date) {
-    stockObj = {};
+    let stockObj = {};
+    let newsTitles = '';
+    const reg = /[{}\/?.,;:|)*–~`‘’“”…!^\-_+<>@#$%&\\=('"]/gi;
 
-    const reports = await getReports(stockId, date);
     const basicInfo = await getBasicInfo(stockId);
     if (!basicInfo) return '존재하지 않는 종목입니다';
-    const pastData = await getPastData(stockId);
-    const avgPrice = await getAverage(reports);
-    const invStatistics = await getInvestor(stockId);
-    // const keywords = await getKeyword(reports);
+    stockObj.reportList = await getReports(stockId, date);
+    const avgPrice = await getAverage(stockObj.reportList);
 
     for (let [key, value] of Object.entries(basicInfo)) {
         stockObj[key] = value;
     }
 
     if (isNaN(avgPrice[0])) {
-        stockObj['priceAvg'] = '의견 없음';
-        stockObj['expYield'] = 0;
+        stockObj.priceAvg = '의견 없음';
+        stockObj.expYield = 0;
     } else {
-        stockObj['priceAvg'] = Math.round(avgPrice[0]);
-        stockObj['expYield'] = round2Deci((stockObj['priceAvg'] /
-            stockObj['tradePrice'] - 1) * 100);
+        stockObj.priceAvg = Math.round(avgPrice[0]);
+        stockObj.expYield = round2Deci((stockObj.priceAvg /
+            stockObj.tradePrice - 1) * 100);
     }
 
-    stockObj['recommend'] = getScore(stockObj['expYield'], avgPrice[1]);
-    stockObj['pastData'] = pastData;
-    stockObj['reportList'] = reports;
-    stockObj['invStatistics'] = invStatistics;
-    stockObj['news'] = await getNews(basicInfo['name']);
-    // stockObj['keywords'] = keywords;
+    stockObj.recommend = getScore(stockObj.expYield, avgPrice[1]);
+    stockObj.pastData = await getPastData(stockId);
+    stockObj.invStatistics = await getInvestor(basicInfo.code);
+    stockObj.news = await getNews(basicInfo.name);
+    stockObj.news.forEach(item => {
+        newsTitles += item.title.replace(reg, "") + ' ';
+    })
+    stockObj.newsTitles = newsTitles;
 
     return stockObj;
 }
