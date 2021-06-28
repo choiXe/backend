@@ -2,20 +2,19 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const parser = require('xml2js').parseString;
 const AWS = require('aws-sdk');
-
 const {numToKorean} = require('num-to-korean');
-const {month} = require('../data/constants.js');
-const getScore = require('./scoreService.js');
-const {daumParams, newsUrl,
-    pastDataUrl, investorUrl} = require('../tools/urlGenerator.js');
 
-AWS.config.update({region: 'ap-northeast-2'});
+const getScore = require('./scoreService.js');
+const {region, timeoutLimit, month} = require('../data/constants.js');
+const {daumParams, newsUrl, pastDataUrl, investorUrl} =
+    require('../tools/urlGenerator.js');
+
+AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
-axios.defaults.timeout = 1500;
+axios.defaults.timeout = timeoutLimit;
 
 /**
  * Returns stock data of past 3 months
- * 날짜 | 시가 | 고가 | 저가 | 종가 | 거래량
  * @param stockId 6 digit number of stock
  */
 async function getPastData(stockId) {
@@ -193,7 +192,7 @@ function numToKR(number) {
 
 /**
  * Returns rounded up number with 2 decimal place
- * @param number value
+ * @param number a number
  */
 function round2Deci(number) {
     return Math.round(number * 100) / 100;
@@ -217,7 +216,6 @@ async function getAverage(reportList) {
 
 /**
  * Returns stock element
- * 섹터 선택 시 그 섹터에 속한 종목 리스트에 들어갈 element 리턴
  * @param stockId 6 digit number of stock
  * @param date Lookup start date (YYYY-MM-DD)
  */
@@ -256,9 +254,4 @@ async function getStockOverview(stockId, date) {
     return stockObj;
 }
 
-async function test() {
-    const a = await getStockOverview('011070', '2021-06-01').then();
-    console.log(a);
-}
-
-test();
+module.exports = {getStockOverview};

@@ -1,12 +1,13 @@
 const axios = require('axios');
 const AWS = require('aws-sdk');
-const getScore = require('./scoreService.js');
 
-AWS.config.update({region: 'ap-northeast-2'});
-const docClient = new AWS.DynamoDB.DocumentClient();
+const getScore = require('./scoreService.js');
+const {region, timeoutLimit} = require('../data/constants.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
 
-let sectorObj;
+AWS.config.update(region);
+const docClient = new AWS.DynamoDB.DocumentClient();
+axios.defaults.timeout = timeoutLimit;
 
 /**
  * Returns list of priceGoals of stocks included in the sector
@@ -95,7 +96,7 @@ async function getStockList(sector, date) {
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getSectorOverview(sector, date) {
-    sectorObj = {};
+    let sectorObj = {};
     sectorObj['stockList'] = await getStockList(sector, date);
     sectorObj['avgYield'] = sectorObj['stockList']['avgYield'];
     sectorObj['top3List'] = sectorObj['stockList']['top3List'];
@@ -104,9 +105,4 @@ async function getSectorOverview(sector, date) {
     return sectorObj;
 }
 
-async function test() {
-    const a = await getSectorOverview('IT', '2021-06-01').then();
-    console.log(a);
-}
-
-test();
+module.exports = {getSectorOverview};
