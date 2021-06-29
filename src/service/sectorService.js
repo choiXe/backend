@@ -82,9 +82,12 @@ async function getStockList(sector, date) {
     const topList = Object.keys(yList)
         .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
     sList['top3List'] = {
-        [topList[0]]: round1Deci(yList[topList[0]]),
-        [topList[1]]: round1Deci(yList[topList[1]]),
-        [topList[2]]: round1Deci(yList[topList[2]])
+        first: topList[0],
+        firstYield: round1Deci(yList[topList[0]]),
+        second: topList[1],
+        secondYield: round1Deci(yList[topList[1]]),
+        third: topList[2],
+        thirdYield: round1Deci(yList[topList[2]]),
     }
 
     sList['avgYield'] = avgYield / Object.keys(sList).length;
