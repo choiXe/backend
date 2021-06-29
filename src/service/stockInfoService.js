@@ -2,10 +2,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const parser = require('xml2js').parseString;
 const AWS = require('aws-sdk');
-const {numToKorean} = require('num-to-korean');
 
 const getScore = require('./scoreService.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
+const {numToKR, round1Deci} = require('../tools/numFormat.js');
 const {daumParams, newsUrl, pastDataUrl, investorUrl} =
     require('../tools/urlGenerator.js');
 
@@ -37,7 +37,7 @@ async function getPastData(stockId) {
             end: parseInt(tmp[4]),
             volume: parseInt(tmp[5])
         })
-    })
+    });
     return prices;
 }
 
@@ -83,14 +83,14 @@ async function getBasicInfo(stockId) {
             code: stockData.code,
             companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
             tradePrice: stockData.tradePrice,
-            changeRate: round2Deci(stockData.changeRate * 100),
+            changeRate: round1Deci(stockData.changeRate * 100),
             marketCap: numToKR(stockData.marketCap).replace('+', ''),
             high52wPrice: stockData.high52wPrice,
             low52wPrice: stockData.low52wPrice,
             foreignRatio: stockData.foreignRatio,
             per: stockData.per,
             pbr: stockData.pbr,
-            roe: round2Deci((stockData.eps / stockData.bps) * 100.0)
+            roe: round1Deci((stockData.eps / stockData.bps) * 100.0)
         }
     } catch (e) {
         console.log('[stockInfoService]: Error in getBasicInfo');
@@ -166,39 +166,6 @@ async function getInvestor(stockISU) {
 }
 
 /**
- * Converts number to KR unit
- * @param number a number
- */
-function numToKR(number) {
-    number = number.toString();
-    if (number === '0' ||
-        (number.indexOf('-') !== -1 && number.length < 6)) return '-';
-
-    let num, isNegative = false;
-    if (number.indexOf('-') !== -1) {
-        isNegative = true;
-        number = number.substr(1);
-    }
-    num = numToKorean(parseInt(number.replace(/,/g,'')), 'mixed');
-    num.indexOf('억') !== -1 ? num = num.substring(0, num.indexOf('억')) + '억'
-        : num = num.substring(0, num.indexOf('만')) + '만';
-
-    if (isNegative) {
-        return '-' + num;
-    } else {
-        return '+' + num;
-    }
-}
-
-/**
- * Returns rounded up number with 2 decimal place
- * @param number a number
- */
-function round2Deci(number) {
-    return Math.round(number * 100) / 100;
-}
-
-/**
  * Returns average priceGoal
  * @param reportList list of reports
  */
@@ -238,7 +205,7 @@ async function getStockOverview(stockId, date) {
         stockObj.expYield = 0;
     } else {
         stockObj.priceAvg = Math.round(avgPrice[0]);
-        stockObj.expYield = round2Deci((stockObj.priceAvg /
+        stockObj.expYield = round1Deci((stockObj.priceAvg /
             stockObj.tradePrice - 1) * 100);
     }
 

@@ -20,23 +20,21 @@ exports.handler = async (event, context, callback) => {
     callback(null, overview);
 };
 
-/*
-async function test(func, type, startDate) {
-    let overview;
-
-    switch (func) {
-        case 'stock':
-            overview = await getStockOverview(type, startDate);
-            break;
-        case 'sector':
-            overview = await getSectorOverview(type, startDate);
-            break;
-        default:
-            overview = 'no matching function';
-    }
-    console.log(overview);
-}
-*/
-
+// async function test(func, type, startDate) {
+//     let overview;
+//
+//     switch (func) {
+//         case 'stock':
+//             overview = await getStockOverview(type, startDate);
+//             break;
+//         case 'sector':
+//             overview = await getSectorOverview(type, startDate);
+//             break;
+//         default:
+//             overview = 'no matching function';
+//     }
+//     console.log(overview);
+// }
+//
 // test('sector', 'IT', '2021-06-01');
 // test('stock', '011070', '2021-06-01');

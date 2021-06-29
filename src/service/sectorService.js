@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const getScore = require('./scoreService.js');
 const {region, timeoutLimit} = require('../data/constants.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
+const {round1Deci} = require('../tools/numFormat.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -58,8 +59,8 @@ async function getStockList(sector, date) {
     for (const i in sList) {
         sList[i]['priceAvg'] = Math.round(sList[i].price
             .reduce((a, b) => a + b, 0) / sList[i].price.length);
-        sList[i]['expYield'] = Math.round((sList[i]['priceAvg'] /
-            sList[i]['tradePrice'] - 1) * 1000) / 10;
+        sList[i]['expYield'] = round1Deci((sList[i]['priceAvg'] /
+            sList[i]['tradePrice'] - 1) * 100);
         avgYield += sList[i]['expYield'];
         sList[i]['cCount'] = sList[i]['price'].length;
 
@@ -81,9 +82,9 @@ async function getStockList(sector, date) {
     const topList = Object.keys(yList)
         .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
     sList['top3List'] = {
-        [topList[0]]: yList[topList[0]],
-        [topList[1]]: yList[topList[1]],
-        [topList[2]]: yList[topList[2]]
+        [topList[0]]: round1Deci(yList[topList[0]]),
+        [topList[1]]: round1Deci(yList[topList[1]]),
+        [topList[2]]: round1Deci(yList[topList[2]])
     }
 
     sList['avgYield'] = avgYield / Object.keys(sList).length;
@@ -98,7 +99,7 @@ async function getStockList(sector, date) {
 async function getSectorOverview(sector, date) {
     let sectorObj = {};
     sectorObj['stockList'] = await getStockList(sector, date);
-    sectorObj['avgYield'] = sectorObj['stockList']['avgYield'];
+    sectorObj['avgYield'] = round1Deci(sectorObj['stockList']['avgYield']);
     sectorObj['top3List'] = sectorObj['stockList']['top3List'];
     delete sectorObj['stockList']['avgYield'];
     delete sectorObj['stockList']['top3List'];
