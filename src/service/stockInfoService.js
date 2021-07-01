@@ -189,11 +189,17 @@ async function getAverage(reportList) {
 async function getStockOverview(stockId, date) {
     let stockObj = {};
     let newsTitles = '';
+    let promises;
     const reg = /[{}\/?.,;:|)*–~`‘’“”…!^\-_+<>@#$%&\\=('"]/gi;
 
-    const basicInfo = await getBasicInfo(stockId);
+    promises = [getBasicInfo(stockId), getReports(stockId, date)];
+    try {
+        promises = await Promise.all(promises);
+    } catch (e) {}
+
+    const basicInfo = promises[0];
     if (!basicInfo) return '존재하지 않는 종목입니다';
-    stockObj.reportList = await getReports(stockId, date);
+    stockObj.reportList = promises[1];
     const avgPrice = await getAverage(stockObj.reportList);
 
     for (let [key, value] of Object.entries(basicInfo)) {
@@ -210,9 +216,15 @@ async function getStockOverview(stockId, date) {
     }
 
     stockObj.recommend = getScore(stockObj.expYield, avgPrice[1]);
-    stockObj.pastData = await getPastData(stockId);
-    stockObj.invStatistics = await getInvestor(basicInfo.code);
-    stockObj.news = await getNews(basicInfo.name);
+    promises = [getNews(basicInfo.name), getPastData(stockId), getInvestor(basicInfo.code)];
+
+    try {
+        promises = await Promise.all(promises);
+    } catch (e) {}
+
+    stockObj.pastData = promises[1];
+    stockObj.invStatistics = promises[2];
+    stockObj.news = promises[0];
     stockObj.news.forEach(item => {
         newsTitles += item.title.replace(reg, "") + ' ';
     })
