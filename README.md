@@ -1,4 +1,4 @@
-# [choiXe](https://choixe.app) Backend &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/choiXe/choiXe/blob/main/LICENSE)
+# [choiXe](https://www.choixe.app) Backend &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/choiXe/choiXe/blob/main/LICENSE)
 
 > AWS Lambda Service used to process the data provided in the choiXe website.
 
