@@ -113,15 +113,15 @@ async function getNews(stockName) {
         })
     } catch (e) { console.log('[stockInfoService]: Error from getNews'); }
 
-    body.forEach(item => {
-        a = item.pubDate[0].split(' ');
+    for (let i=0; i<body.length; i++) {
+        a = body[i].pubDate[0].split(' ');
         newsList.push({
-            title: item.title[0].split(' - ' + item.source[0]['_'])[0],
+            title: body[i].title[0].split(' - ' + body[i].source[0]['_'])[0],
             date: a[3] + '-' + month[a[2]] + '-' + a[1],
-            source: item.source[0]['_'],
-            link: item.link[0]
+            source: body[i].source[0]['_'],
+            link: body[i].link[0]
         })
-    })
+    }
     return newsList;
 }
 
