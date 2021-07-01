@@ -22,8 +22,8 @@ function daumParams(stockId) {
 }
 
 function newsUrl(stockName) {
-    return encodeURI('https://news.google.com/rss/search?q=' +
-        stockName + '&hl=ko&gl=KR&ceid=KR%3Ako');
+    return 'https://openapi.naver.com/v1/search/news.json?query=' +
+        encodeURI(stockName) + '&display=100&sort=sim';
 }
 
 function pastDataUrl(stockId, count) {

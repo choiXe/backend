@@ -1,10 +1,10 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const parser = require('xml2js').parseString;
 const AWS = require('aws-sdk');
 
 const getScore = require('./scoreService.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
+const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
 const {numToKR, round1Deci} = require('../tools/numFormat.js');
 const {daumParams, newsUrl, pastDataUrl, investorUrl} =
     require('../tools/urlGenerator.js');
@@ -107,21 +107,22 @@ async function getNews(stockName) {
     let newsList = [];
 
     try {
-        body = await axios.get(newsUrl(stockName));
-        parser(body.data, function (err, res) {
-            body = res.rss.channel[0].item;
+        body = (await axios.get(newsUrl(stockName), {
+            headers: {
+                'X-Naver-Client-Id': X_NAVER_CLIENT_ID,
+                'X-Naver-Client-Secret': X_NAVER_CLIENT_SECRET
+            }
+        })).data.items;
+        body.forEach(item => {
+            a = item.pubDate.split(' ');
+            newsList.push({
+                title: item.title.replace(/(&quot;|<([^>]+)>)/ig, ''),
+                date: a[3] + '-' + month[a[2]] + '-' + a[1],
+                link: item.link
+            })
         })
     } catch (e) { console.log('[stockInfoService]: Error from getNews'); }
 
-    for (let i=0; i<body.length; i++) {
-        a = body[i].pubDate[0].split(' ');
-        newsList.push({
-            title: body[i].title[0].split(' - ' + body[i].source[0]['_'])[0],
-            date: a[3] + '-' + month[a[2]] + '-' + a[1],
-            source: body[i].source[0]['_'],
-            link: body[i].link[0]
-        })
-    }
     return newsList;
 }
 
