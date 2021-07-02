@@ -39,47 +39,43 @@ async function getStockList(sector, date) {
     const priceList = (await docClient.query(query).promise()).Items;
     for (const item of priceList) {
         if (item.priceGoal !== '0') {
-            if (!pList[item.stockId]) {
-                pList[item.stockId] = {
+            if (!pList[item.stockName]) {
+                try {
+                    body = await axios.get(naverApiUrl(item.stockId));
+                } catch (e) { console.log('[sectorService]: Error in getStockList'); }
+
+                pList[item.stockName] = {
                     stockName: item.stockName,
                     stockId: item.stockId,
                     sSector: item.sSector,
+                    tradePrice: body.data.now,
+                    changeRate: body.data.rate,
                     price: []
                 };
             }
-            pList[item.stockId].price.push(parseInt(item.priceGoal));
+            pList[item.stockName].price.push(parseInt(item.priceGoal));
         }
     }
 
-    for (const [key, value] of Object.entries(pList)) {
-        try {
-            body = await axios.get(naverApiUrl(key));
-        } catch (e) { console.log('[sectorService]: Error in getStockList'); }
-        sList.push({
-            stockName: value.stockName,
-            stockId: key,
-            sSector: value.sSector,
-            tradePrice: body.data.now,
-            changeRate: body.data.rate,
-            price: value.price
-        })
+    for (let i in pList) {
+        sList.push(pList[i]);
     }
 
     for (const i in sList) {
-        sList[i]['priceAvg'] = Math.round(sList[i].price
+        sList[i].priceAvg = Math.round(sList[i].price
             .reduce((a, b) => a + b, 0) / sList[i].price.length);
-        sList[i]['expYield'] = round1Deci((sList[i]['priceAvg'] /
-            sList[i]['tradePrice'] - 1) * 100);
-        avgYield += sList[i]['expYield'];
-        sList[i]['cCount'] = sList[i]['price'].length;
+        sList[i].expYield = round1Deci((sList[i].priceAvg /
+            sList[i].tradePrice - 1) * 100);
+        avgYield += sList[i].expYield;
+        sList[i].cCount = sList[i].price.length;
 
         // 각 섹터당 해당하는 종목 추가
         if (!yList[sList[i].sSector]) {
             yList[sList[i].sSector] = [];
         }
-        yList[sList[i].sSector].push(sList[i]['expYield']);
-        sList[i]['score'] = getScore(sList[i]['expYield'], sList[i]['cCount']);
-        delete sList[i]['price'];
+        yList[sList[i].sSector].push(sList[i].expYield);
+        sList[i].score = getScore(sList[i].expYield, sList[i].cCount);
+        delete sList[i].price;
     }
 
     // 섹터별로 expYield 구하기
@@ -90,7 +86,7 @@ async function getStockList(sector, date) {
     // expYield 가 제일 높은 하위 3개 섹터 분류 구하기
     const topList = Object.keys(yList)
         .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
-    sList['top3List'] = {
+    sList.top3List = {
         first: topList[0],
         firstYield: round1Deci(yList[topList[0]]),
         second: topList[1],
@@ -99,7 +95,7 @@ async function getStockList(sector, date) {
         thirdYield: round1Deci(yList[topList[2]]),
     }
 
-    sList['avgYield'] = avgYield / Object.keys(sList).length;
+    sList.avgYield = avgYield / Object.keys(sList).length;
     return sList;
 }
 
@@ -110,11 +106,11 @@ async function getStockList(sector, date) {
  */
 async function getSectorOverview(sector, date) {
     let sectorObj = {};
-    sectorObj['stockList'] = await getStockList(sector, date);
-    sectorObj['avgYield'] = round1Deci(sectorObj['stockList']['avgYield']);
-    sectorObj['top3List'] = sectorObj['stockList']['top3List'];
-    delete sectorObj['stockList']['avgYield'];
-    delete sectorObj['stockList']['top3List'];
+    sectorObj.stockList = await getStockList(sector, date);
+    sectorObj.avgYield = round1Deci(sectorObj.stockList.avgYield);
+    sectorObj.top3List = sectorObj.stockList.top3List;
+    delete sectorObj.stockList.avgYield;
+    delete sectorObj.stockList.top3List;
     return sectorObj;
 }
 
