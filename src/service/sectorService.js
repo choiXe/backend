@@ -18,7 +18,7 @@ axios.defaults.timeout = timeoutLimit;
  */
 async function getStockList(sector, date) {
     let body;
-    let sList = {}, yList = {};
+    let sList = [], yList = {}, pList = {};
     let avgYield = 0.0;
     const query = {
         TableName: 'reportListComplete',
@@ -39,21 +39,30 @@ async function getStockList(sector, date) {
     const priceList = (await docClient.query(query).promise()).Items;
     for (const item of priceList) {
         if (item.priceGoal !== '0') {
-            if (!sList[item.stockName]) {
-                try {
-                    body = await axios.get(naverApiUrl(item.stockId));
-                } catch (e) { console.log('[sectorService]: Error in getStockList'); }
-
-                sList[item.stockName] = {
+            if (!pList[item.stockId]) {
+                pList[item.stockId] = {
+                    stockName: item.stockName,
                     stockId: item.stockId,
                     sSector: item.sSector,
-                    tradePrice: body.data.now,
-                    changeRate: body.data.rate,
                     price: []
                 };
             }
-            sList[item.stockName].price.push(parseInt(item.priceGoal));
+            pList[item.stockId].price.push(parseInt(item.priceGoal));
         }
+    }
+
+    for (const [key, value] of Object.entries(pList)) {
+        try {
+            body = await axios.get(naverApiUrl(key));
+        } catch (e) { console.log('[sectorService]: Error in getStockList'); }
+        sList.push({
+            stockName: value.stockName,
+            stockId: key,
+            sSector: value.sSector,
+            tradePrice: body.data.now,
+            changeRate: body.data.rate,
+            price: value.price
+        })
     }
 
     for (const i in sList) {
