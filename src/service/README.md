@@ -8,10 +8,10 @@
 
 ```javascript
 stockId: 종목 코드    // (Format: 숫자 6자리 ######)
-date: 조희 시작 기간   // (Format: YYYY-MM-dd)
+date: 조회 시작 기간   // (Format: YYYY-MM-dd)
 ```
 
-### Responce (stockObj)
+### Response (stockObj)
 
 ```javascript
 name (String)                   // 종목 이름
@@ -44,10 +44,10 @@ newsTitles (String)             // Wordcloud 생성을 위한 뉴스 제목들
 
 ```javascript
 sector: 섹터         // (Format: String)
-date: 조희 시작 기간   // (Format: YYYY-MM-dd)
+date: 조회 시작 기간   // (Format: YYYY-MM-dd)
 ```
 
-### Responce (sectorObj)
+### Response (sectorObj)
 
 ```javascript
 avgYield (Float)                // 섹터 평균 상승여력
