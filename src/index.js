@@ -1,7 +1,7 @@
 'use strict';
 
 const {getStockOverview} = require('./service/stockInfoService.js');
-const {getSectorOverview} = require('./service/sectorService.js');
+const {getSectorOverview} = require('./service/sectorInfoService.js');
 
 exports.handler = (event, context, callback) => {
     const fnName = event.field;
