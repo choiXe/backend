@@ -29,9 +29,9 @@ roe (Float)                     // Return on Equity
 priceAvg (Int)                  // 애널리스트 목표가의 평균값
 expYield (Float)                // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
 recommend (Int)                 // 종목 점수 (투자 매력도)
-pastData (List)                 // 지난 3달간의 종목 가격 및 거래량 데이터
+pastData (List)                 // 최근 3달간의 종목 가격 및 거래량 데이터
 reportList (List)               // 특정 기간동안에 발행된 리포트의 리스트
-invStatistics (List)            // 지난 3주간의 투자자 동향
+invStatistics (List)            // 최근 1달간의 투자자 동향
 news (List)                     // 회사 관련 뉴스
 newsTitles (String)             // Wordcloud 생성을 위한 뉴스 제목들
 ```

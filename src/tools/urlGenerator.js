@@ -35,7 +35,7 @@ function pastDataUrl(stockId, count) {
 function investorUrl(stockISU) {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 21);
+    startDate.setDate(startDate.getDate() - 31);
     const url = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
 
     let params = {

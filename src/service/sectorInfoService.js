@@ -1,7 +1,7 @@
 const axios = require('axios');
 const AWS = require('aws-sdk');
 
-const getScore = require('./scoreService.js');
+const {getScore} = require('./scoreService.js');
 const {region, timeoutLimit} = require('../data/constants.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
 const {round1Deci} = require('../tools/numFormat.js');

@@ -1,5 +1,5 @@
 /**
- * Returns recommendation in score (Scale of -100 ~ 100)
+ * Returns recommendation score of a stock
  * @param expYield expected profit yield
  * @param consensusCount number of reports backing up priceGoal
  */
@@ -23,4 +23,4 @@ function getScore(expYield, consensusCount) {
     return Math.sign(expYield) * Math.round(a + b) * 5;
 }
 
-module.exports = getScore;
+module.exports = {getScore};

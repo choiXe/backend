@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 
-const getScore = require('./scoreService.js');
+const {getScore} = require('./scoreService.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
 const {numToKR, round1Deci} = require('../tools/numFormat.js');
@@ -42,11 +42,15 @@ async function getPastData(stockId) {
 }
 
 /**
- * Returns reports company with attr: stockId written in specific date range
+ * Returns reports of company within 1 year and specific date range
  * @param stockId 6 digit number of stock
  * @param date starting date of search
  */
 async function getReports(stockId, date) {
+    let allReport, dateReport = [];
+    let yearAgo = new Date();
+    yearAgo.setDate(yearAgo.getDate() - 365);
+    yearAgo = yearAgo.toISOString().slice(0, 10);
     const query = {
         TableName: 'reportListComplete',
         IndexName: "stockId-date-index",
@@ -58,11 +62,19 @@ async function getReports(stockId, date) {
         },
         ExpressionAttributeValues: {
             ':id': stockId,
-            ':date': date
+            ':date': yearAgo
         },
         ScanIndexForward: false
     };
-    return (await docClient.query(query).promise()).Items;
+
+    allReport = (await docClient.query(query).promise()).Items;
+    allReport.forEach(report => {
+        if (report.date >= date) {
+            dateReport.push(report);
+        }
+    })
+
+    return [allReport, dateReport];
 }
 
 /**
@@ -189,19 +201,16 @@ async function getAverage(reportList) {
  */
 async function getStockOverview(stockId, date) {
     let stockObj = {};
-    let newsTitles = '';
     let promises;
     const reg = /[{}\/?.,;:|)*–~`‘’“”…!^\-_+<>@#$%&\\=('"]/gi;
 
     promises = [getBasicInfo(stockId), getReports(stockId, date)];
-    try {
-        promises = await Promise.all(promises);
-    } catch (e) {}
+    try { promises = await Promise.all(promises); } catch (e) {}
 
     const basicInfo = promises[0];
     if (!basicInfo) return '존재하지 않는 종목입니다';
-    stockObj.reportList = promises[1];
-    const avgPrice = await getAverage(stockObj.reportList);
+    stockObj.reportList = promises[1][0];
+    const avgPrice = await getAverage(promises[1][1]);
 
     for (let [key, value] of Object.entries(basicInfo)) {
         stockObj[key] = value;
@@ -217,19 +226,18 @@ async function getStockOverview(stockId, date) {
     }
 
     stockObj.recommend = getScore(stockObj.expYield, avgPrice[1]);
-    promises = [getNews(basicInfo.name), getPastData(stockId), getInvestor(basicInfo.code)];
+    promises = [getPastData(stockId), getInvestor(basicInfo.code), getNews(basicInfo.name)];
 
-    try {
-        promises = await Promise.all(promises);
-    } catch (e) {}
+    try { promises = await Promise.all(promises); } catch (e) {}
 
-    stockObj.pastData = promises[1];
-    stockObj.invStatistics = promises[2];
-    stockObj.news = promises[0];
+    stockObj.pastData = promises[0];
+    stockObj.invStatistics = promises[1];
+    stockObj.news = promises[2];
+    stockObj.newsTitles = '';
     stockObj.news.forEach(item => {
-        newsTitles += item.title.replace(reg, "") + ' ';
+        stockObj.newsTitles += item.title.replace(reg, ' ') + ' ';
     })
-    stockObj.newsTitles = newsTitles;
+    stockObj.newsTitles = stockObj.newsTitles.replace(/  +/g, ' ');
 
     return stockObj;
 }
