@@ -4,8 +4,9 @@ const AWS = require('aws-sdk');
 
 const {getScore} = require('./scoreService.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
+const {stockInfoQuery} = require('../data/queries.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
-const {numToKR, round1Deci} = require('../tools/numFormat.js');
+const {numToKR, round1Deci, getPastDate} = require('../tools/formatter.js');
 const {daumParams, newsUrl, pastDataUrl, investorUrl} =
     require('../tools/urlGenerator.js');
 
@@ -48,26 +49,8 @@ async function getPastData(stockId) {
  */
 async function getReports(stockId, date) {
     let allReport, dateReport = [];
-    let yearAgo = new Date();
-    yearAgo.setDate(yearAgo.getDate() - 365);
-    yearAgo = yearAgo.toISOString().slice(0, 10);
-    const query = {
-        TableName: 'reportListComplete',
-        IndexName: "stockId-date-index",
-        ProjectionExpression: '#dt, reportName, analyst, priceGoal, firm, reportIdx',
-        KeyConditionExpression: '#id = :id and #dt >= :date',
-        ExpressionAttributeNames: {
-            '#id': 'stockId',
-            '#dt': 'date'
-        },
-        ExpressionAttributeValues: {
-            ':id': stockId,
-            ':date': yearAgo
-        },
-        ScanIndexForward: false
-    };
 
-    allReport = (await docClient.query(query).promise()).Items;
+    allReport = (await docClient.query(stockInfoQuery(stockId)).promise()).Items;
     allReport.forEach(report => {
         if (report.date >= date) {
             dateReport.push(report);
@@ -144,7 +127,6 @@ async function getNews(stockName) {
  */
 async function getInvestor(stockISU) {
     let body, investInfo = [];
-    const date = new Date().toISOString().slice(0, 10);
 
     try {
         body = await axios.get(investorUrl(stockISU));
@@ -166,7 +148,7 @@ async function getInvestor(stockISU) {
     } catch (error) {
         if (error.code === 'ECONNABORTED') {
             return {
-                date: date,
+                date: getPastDate(0),
                 individual: '',
                 foreign: '점검중',
                 institutions: ''

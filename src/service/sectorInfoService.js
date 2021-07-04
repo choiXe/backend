@@ -3,8 +3,9 @@ const AWS = require('aws-sdk');
 
 const {getScore} = require('./scoreService.js');
 const {region, timeoutLimit} = require('../data/constants.js');
+const {sectorInfoQuery} = require('../data/queries.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
-const {round1Deci} = require('../tools/numFormat.js');
+const {round1Deci} = require('../tools/formatter.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -20,23 +21,9 @@ async function getStockList(sector, date) {
     let body;
     let sList = [], yList = {}, pList = {};
     let avgYield = 0.0;
-    const query = {
-        TableName: 'reportListComplete',
-        IndexName: 'lSector-date-index',
-        ProjectionExpression: '#dt, stockName, stockId, priceGoal, sSector',
-        KeyConditionExpression: '#sector = :sector and #dt >= :date',
-        ExpressionAttributeNames: {
-            '#sector': 'lSector',
-            '#dt': 'date'
-        },
-        ExpressionAttributeValues: {
-            ':sector': sector,
-            ':date': date
-        },
-        ScanIndexForward: false
-    };
 
-    const priceList = (await docClient.query(query).promise()).Items;
+    const priceList = (await docClient.query(
+        sectorInfoQuery(sector, date)).promise()).Items;
     for (const item of priceList) {
         if (item.priceGoal !== '0') {
             if (!pList[item.stockName]) {

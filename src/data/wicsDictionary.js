@@ -1,3 +1,6 @@
+const lSectors = ['IT', '필수소비재', '커뮤니케이션서비스', '유틸리티',
+    '에너지', '소재', '산업재', '금융', '경기관련소비재', '건강관리'];
+
 const wicsDict = {
     '전기제품': ['전자와전기제품', 'IT'],
     '전자제품': ['전자와전기제품', 'IT'],
@@ -81,4 +84,4 @@ const wicsDict = {
     '건강관리장비와용품': ['건강관리장비와서비스', '건강관리']
 };
 
-module.exports = {wicsDict};
+module.exports = {wicsDict, lSectors};

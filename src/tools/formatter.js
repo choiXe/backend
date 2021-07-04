@@ -33,4 +33,14 @@ function round1Deci(number) {
     return Math.round(number * 10) / 10;
 }
 
-module.exports = {numToKR, round1Deci};
+/**
+ * Returns date before attr: daysAgo
+ * @param daysAgo days
+ */
+function getPastDate(daysAgo) {
+    let date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date.toISOString().slice(0, 10);
+}
+
+module.exports = {numToKR, round1Deci, getPastDate};
