@@ -14,12 +14,13 @@
  * 인기도 & 추세 (Popularity)
  *     공통 (성장주 & 가치주)
  *         volume: 거래량 (증가할수록 점수 ↑)
- *         communityIndex: 커뮤니티 활성도 (증가할수록 점수 ↑)
+ *         communityScore: 커뮤니티 활성도 (증가할수록 점수 ↑)
  *         momentum: 모멘텀 수치 (높을수록 점수 ↑)
  *
  * 재무 (Financials)
  *     성장주
  *         PEG (Price Earnings Growth): 1을 기준으로 낮으면 저평가, 높으면 고평가
+ *             > PER ÷ (주당순이익증가율,% X 100)
  *         Growth Rate of Net Income: 순이익 증가율과 주가 상승률을 비교
  *     가치주
  *         PER: 섹터 평균 보다 낮으면 점수 ↑
@@ -41,10 +42,12 @@
 
 const AWS = require('aws-sdk');
 const axios = require('axios');
+const cheerio = require('cheerio');
 
 const {region, timeoutLimit} = require('../data/constants.js');
 const {lSectors} = require('../data/wicsDictionary.js');
 const {scoreQuery} = require('../data/queries.js');
+const {naverApiUrl2, wiseReportUrl} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -52,11 +55,11 @@ axios.defaults.timeout = timeoutLimit;
 
 /**
  * Returns list of stockIds and their report count & priceGoal
- * that has at least 1 report for past 3 months
+ * that has at least 1 report for past 3 months.
  */
 async function getIdList() {
     let reportList = [], stockList = {};
-    let price;
+    let price, query = '';
 
     for (const sector of lSectors) {
         reportList.push.apply(reportList,
@@ -65,14 +68,69 @@ async function getIdList() {
     reportList.forEach(item => {
         price = parseInt(item.priceGoal);
         if (!stockList[item.stockId]) {
-            stockList[item.stockId] = { count: 1 }
+            stockList[item.stockId] = { stockId: item.stockId, count: 1 }
             price !== 0 ? stockList[item.stockId].price = [price] :
                 stockList[item.stockId].price = [];
         }
         stockList[item.stockId].count++;
         if (price !== 0) stockList[item.stockId].price.push(price);
+    });
+    for (let i in stockList) {
+        query += stockList[i].stockId + ',';
+        stockList[i].priceAvg = stockList[i].price.reduce(
+            (a, b) => a + b, 0) / stockList[i].price.length;
+        delete stockList[i].price;
+    }
+    stockList.query = query;
+    return stockList;
+}
+
+/**
+ * Returns stockList after adding tradePrice, avgYield, PER, PBR, and ROE
+ * @param stockList list of stocks
+ */
+async function addBasicInfo(stockList) {
+    let body, tmp;
+    try {
+        body = (await axios.get(naverApiUrl2(stockList.query)))
+            .data.result.areas[0].datas;
+        delete stockList.query;
+    } catch (e) {}
+    body.forEach(item => {
+        tmp = stockList[item.cd];
+        tmp.tradePrice = item.nv;
+        tmp.avgYield = tmp.priceAvg / item.nv;
+        tmp.per = item.nv / item.eps;
+        tmp.pbr = item.nv / item.bps;
+        tmp.roe = item.eps / item.bps;
     })
     return stockList;
+}
+
+/**
+ * Returns organized financial object
+ * @param stockId 6 digit number code of stock
+ */
+async function fSeparator(stockId) {
+    let body, fData = [];
+    try {
+        body = await axios.get(wiseReportUrl(stockId));
+    } catch (e) {}
+    const $ = cheerio.load(body.data);
+    $('tbody tr').map(function () {
+        fData.push({
+            year: $(this).find('td:nth-child(1)').text().split('(')[0],
+            revenue: $(this).find('td:nth-child(2)').text(),
+            revenueDif: $(this).find('td:nth-child(2)').text(),
+            opIncome: $(this).find('td:nth-child(3)').text(),
+            opIncomeDif: $(this).find('td:nth-child(4)').text(),
+            income: $(this).find('td:nth-child(5)').text(),
+            incomeDif: $(this).find('td:nth-child(6)').text(),
+            ebitda: $(this).find('td:nth-child(12)').text(),
+            debtRatio: $(this).find('td:nth-child(13)').text()
+        })
+    });
+    return fData;
 }
 
 /**
@@ -101,8 +159,10 @@ function getScore(expYield, consensusCount) {
 }
 
 async function test() {
-    const a = await getIdList();
-    console.log(a);
+    // const a = await getIdList();
+    // const b = await addBasicInfo(a);
+    const c = await fSeparator('011070');
+    console.log(c);
 }
 
 test();
