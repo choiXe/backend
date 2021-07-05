@@ -16,14 +16,14 @@ axios.defaults.timeout = timeoutLimit;
 
 /**
  * Returns stock data of past 3 months
- * @param stockId 6 digit number of stock
+ * @param stockId 6 digit number code of stock
  */
 async function getPastData(stockId) {
     let body, tmp;
     let prices = [];
 
     try {
-        body = await axios.get(pastDataUrl(stockId, 65));
+        body = await axios.get(pastDataUrl(stockId, 91));
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
@@ -44,7 +44,7 @@ async function getPastData(stockId) {
 
 /**
  * Returns reports of company within 1 year and specific date range
- * @param stockId 6 digit number of stock
+ * @param stockId 6 digit number code of stock
  * @param date starting date of search
  */
 async function getReports(stockId, date) {
@@ -62,7 +62,7 @@ async function getReports(stockId, date) {
 
 /**
  * Returns basic information of the stock
- * @param stockId 6 digit number of stock
+ * @param stockId 6 digit number code of stock
  */
 async function getBasicInfo(stockId) {
     let body;
@@ -178,7 +178,7 @@ async function getAverage(reportList) {
 
 /**
  * Returns stock element
- * @param stockId 6 digit number of stock
+ * @param stockId 6 digit number code of stock
  * @param date Lookup start date (YYYY-MM-DD)
  */
 async function getStockOverview(stockId, date) {

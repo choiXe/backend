@@ -1,15 +1,10 @@
 function generateUrl(baseUrl, params) {
     let url = baseUrl + '?';
-
-    for (const property in params) {
-        url += `${property}=${params[property]}&`
+    for (let i=0; i<params.length; i++) {
+        url += `${i}=${params[i]}&`
     }
-
-    url = url.substring(0, url.length - 1);
     return url;
 }
-
-// stockInfoService
 
 function daumParams(stockId) {
     const url = 'https://finance.daum.net/api/quotes/A'
@@ -29,7 +24,6 @@ function newsUrl(stockName) {
 function pastDataUrl(stockId, count) {
     return 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&symbol=' +
         stockId + '&count=' + count;
-
 }
 
 function investorUrl(stockISU) {
@@ -49,10 +43,17 @@ function investorUrl(stockISU) {
     return generateUrl(url, params);
 }
 
-// sectorService
-
 function naverApiUrl(stockId) {
     return 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=' + stockId;
 }
 
-module.exports = {daumParams, newsUrl, pastDataUrl, investorUrl, naverApiUrl};
+function naverApiUrl2(stockIds) {
+    return 'https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:' + stockIds;
+}
+
+function wiseReportUrl(stockId) {
+    return 'https://comp.wisereport.co.kr/company/cF1002.aspx?finGubun=MAIN&frq=0&cmp_cd=' + stockId;
+}
+
+module.exports = {daumParams, newsUrl, pastDataUrl, investorUrl,
+    naverApiUrl, naverApiUrl2, wiseReportUrl};
