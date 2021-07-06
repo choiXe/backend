@@ -23,7 +23,7 @@ async function getPastData(stockId) {
     let prices = [];
 
     try {
-        body = await axios.get(pastDataUrl(stockId, 91));
+        body = await axios.get(pastDataUrl(stockId, 91, 'day'));
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
