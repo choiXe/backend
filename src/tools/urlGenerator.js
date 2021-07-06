@@ -21,9 +21,14 @@ function newsUrl(stockName) {
         encodeURI(stockName) + '&display=100&sort=sim';
 }
 
-function pastDataUrl(stockId, count) {
-    return 'https://fchart.stock.naver.com/sise.nhn?timeframe=day&requestType=0&symbol=' +
-        stockId + '&count=' + count;
+/**
+ * @param stockId 6 digit number code of stock
+ * @param count number of data
+ * @param option day, week, month
+ */
+function pastDataUrl(stockId, count, option) {
+    return 'https://fchart.stock.naver.com/sise.nhn?requestType=0&symbol=' +
+        stockId + '&count=' + count + '&timeframe=' + option;
 }
 
 function investorUrl(stockISU) {

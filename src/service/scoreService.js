@@ -16,11 +16,12 @@
  *         volume: 거래량 (증가할수록 점수 ↑)
  *         communityScore: 커뮤니티 활성도 (증가할수록 점수 ↑)
  *         momentum: 모멘텀 수치 (높을수록 점수 ↑)
+ *             > (금일 종가 / N일 전 종가) * 100
  *
  * 재무 (Financials)
  *     성장주
  *         PEG (Price Earnings Growth): 1을 기준으로 낮으면 저평가, 높으면 고평가
- *             > PER ÷ (주당순이익증가율,% X 100)
+ *             > PER ÷ (주당순이익증가율% X 100)
  *         Growth Rate of Net Income: 순이익 증가율과 주가 상승률을 비교
  *     가치주
  *         PER: 섹터 평균 보다 낮으면 점수 ↑
@@ -46,8 +47,9 @@ const cheerio = require('cheerio');
 
 const {region, timeoutLimit} = require('../data/constants.js');
 const {lSectors} = require('../data/wicsDictionary.js');
+const {strToNum} = require('../tools/formatter.js');
 const {scoreQuery} = require('../data/queries.js');
-const {naverApiUrl2, wiseReportUrl} = require('../tools/urlGenerator.js');
+const {naverApiUrl2, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -59,7 +61,7 @@ axios.defaults.timeout = timeoutLimit;
  */
 async function getIdList() {
     let reportList = [], stockList = {};
-    let price, query = '';
+    let price, id, query = '';
 
     for (const sector of lSectors) {
         reportList.push.apply(reportList,
@@ -67,13 +69,14 @@ async function getIdList() {
     }
     reportList.forEach(item => {
         price = parseInt(item.priceGoal);
-        if (!stockList[item.stockId]) {
-            stockList[item.stockId] = { stockId: item.stockId, count: 1 }
-            price !== 0 ? stockList[item.stockId].price = [price] :
-                stockList[item.stockId].price = [];
+        id = item.stockId;
+        if (!stockList[id]) {
+            stockList[id] = { stockId: id, count: 1 }
+            price !== 0 ? stockList[id].price = [price] :
+                stockList[id].price = [];
         }
-        stockList[item.stockId].count++;
-        if (price !== 0) stockList[item.stockId].price.push(price);
+        stockList[id].count++;
+        if (price !== 0) stockList[id].price.push(price);
     });
     for (let i in stockList) {
         query += stockList[i].stockId + ',';
@@ -91,27 +94,33 @@ async function getIdList() {
  */
 async function addBasicInfo(stockList) {
     let body, tmp;
+    let stockId;
     try {
         body = (await axios.get(naverApiUrl2(stockList.query)))
             .data.result.areas[0].datas;
         delete stockList.query;
     } catch (e) {}
-    body.forEach(item => {
-        tmp = stockList[item.cd];
+    for (const item of body) {
+        stockId = item.cd;
+        tmp = stockList[stockId];
         tmp.tradePrice = item.nv;
         tmp.avgYield = tmp.priceAvg / item.nv;
         tmp.per = item.nv / item.eps;
         tmp.pbr = item.nv / item.bps;
         tmp.roe = item.eps / item.bps;
-    })
+        console.log('Working on: ' + stockId);
+        tmp.fData = await getFinancialData(stockId);
+        tmp.popularity = await getPopularity(stockId);
+        tmp.financial = await calGFinancial(tmp);
+    }
     return stockList;
 }
 
 /**
- * Returns organized financial object
+ * Returns organized financial information object
  * @param stockId 6 digit number code of stock
  */
-async function fSeparator(stockId) {
+async function getFinancialData(stockId) {
     let body, fData = [];
     try {
         body = await axios.get(wiseReportUrl(stockId));
@@ -119,18 +128,97 @@ async function fSeparator(stockId) {
     const $ = cheerio.load(body.data);
     $('tbody tr').map(function () {
         fData.push({
-            year: $(this).find('td:nth-child(1)').text().split('(')[0],
-            revenue: $(this).find('td:nth-child(2)').text(),
-            revenueDif: $(this).find('td:nth-child(2)').text(),
-            opIncome: $(this).find('td:nth-child(3)').text(),
-            opIncomeDif: $(this).find('td:nth-child(4)').text(),
-            income: $(this).find('td:nth-child(5)').text(),
-            incomeDif: $(this).find('td:nth-child(6)').text(),
-            ebitda: $(this).find('td:nth-child(12)').text(),
-            debtRatio: $(this).find('td:nth-child(13)').text()
-        })
+            year: parseInt($(this).find('td:nth-child(1)').text().split('(')[0]),
+            revenue: strToNum($(this).find('td:nth-child(2)').text()),
+            revenueDif: strToNum($(this).find('td:nth-child(3)').text()),
+            opIncome: strToNum($(this).find('td:nth-child(4)').text()),
+            opIncomeDif: strToNum($(this).find('td:nth-child(5)').text()),
+            income: strToNum($(this).find('td:nth-child(6)').text()),
+            incomeDif: strToNum($(this).find('td:nth-child(7)').text()),
+            eps: strToNum($(this).find('td:nth-child(8)').text()),
+            evEbitda: strToNum($(this).find('td:nth-child(12)').text()),
+            debtRatio: strToNum($(this).find('td:nth-child(13)').text())
+        });
     });
     return fData;
+}
+
+/**
+ * Returns popularity data
+ * @param stockId 6 digit number code of stock
+ */
+async function getPopularity(stockId) {
+    let body, tmp;
+    let vData = [], pData = [];
+    try {
+        body = await axios.get(pastDataUrl(stockId, 30, 'day'));
+    } catch (e) {}
+    const $ = cheerio.load(body.data, {xmlMode: true});
+
+    $('item').each(function () {
+        tmp = $(this).attr('data').split('|');
+        vData.push(parseInt(tmp[5]));
+        pData.push(parseInt(tmp[4]));
+    });
+
+    if (vData.length < 30) {
+        return {
+            volumeInc: '데이터 부족',
+            momentum: {
+                day10: '데이터 부족',
+                day20: '데이터 부족',
+                day30: '데이터 부족',
+            }
+        }
+    }
+
+    vData = (vData[25] + vData[26] + vData[27] + vData[28] + vData[29]) /
+        (vData[20] + vData[21] + vData[22] + vData[23] + vData[24]);
+
+    return {
+        volumeInc: vData - 1,
+        momentum: {
+            day10: pData[0] / pData[9] > 1 ? 'Up' : 'Down',
+            day20: pData[0] / pData[19] > 1 ? 'Up' : 'Down',
+            day30: pData[0] / pData[29] > 1 ? 'Up' : 'Down'
+        }
+    };
+}
+
+/**
+ * Calculates financial investment data for 'Growth Stock'
+ * PEG & Growth Rate of Net Income
+ */
+function calGFinancial(stockItem) {
+    const size = stockItem.fData.length;
+    try {
+        const peg = stockItem.per /
+            (100 * stockItem.fData[size - 1].eps / stockItem.fData[size - 2].eps);
+        const niGrowth2yr = (stockItem.fData[size - 1].incomeDif +
+            stockItem.fData[size - 2].incomeDif + stockItem.fData[size - 3].incomeDif) / 3;
+        const niGrowth1yr = (stockItem.fData[size - 1].incomeDif +
+            stockItem.fData[size - 2].incomeDif) / 2;
+        return {
+            peg: peg,
+            niGrowth1yr: niGrowth1yr,
+            niGrowth2yr: niGrowth2yr
+        };
+    } catch (e) {
+        return {
+            peg: NaN,
+            niGrowth1yr: NaN,
+            niGrowth2yr: NaN
+        }
+    }
+}
+
+/**
+ * TODO: Calculates financial investment data for 'Value Stock'
+ *       PER, PBR, GP/A
+ *       ROE, EV/EBITDA, Debt Growth Ratio
+ */
+function calVFinancial() {
+
 }
 
 /**
@@ -159,10 +247,9 @@ function getScore(expYield, consensusCount) {
 }
 
 async function test() {
-    // const a = await getIdList();
-    // const b = await addBasicInfo(a);
-    const c = await fSeparator('011070');
-    console.log(c);
+    const a = await getIdList();
+    const b = await addBasicInfo(a);
+    console.log(b);
 }
 
 test();

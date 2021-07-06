@@ -26,6 +26,14 @@ function numToKR(number) {
 }
 
 /**
+ * Converts string number with thousand separator into number
+ * @param number a number
+ */
+function strToNum(number) {
+    return parseFloat(number.replace(/,/g, ''));
+}
+
+/**
  * Returns rounded up number with 1 decimal place
  * @param number a number
  */
@@ -43,4 +51,4 @@ function getPastDate(daysAgo) {
     return date.toISOString().slice(0, 10);
 }
 
-module.exports = {numToKR, round1Deci, getPastDate};
+module.exports = {numToKR, strToNum, round1Deci, getPastDate};
