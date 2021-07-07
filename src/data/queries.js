@@ -46,7 +46,7 @@ function sectorInfoQuery(sector, date) {
 }
 
 /**
- * Query for scoreService.js
+ * Query for scoreTask.js
  * @param sector sector
  */
 function scoreQuery(sector) {

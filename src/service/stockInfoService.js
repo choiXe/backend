@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 
-const {getScore} = require('./scoreService.js');
+const {getScore} = require('../tasks/scoreTask.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
 const {stockInfoQuery} = require('../data/queries.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
@@ -73,10 +73,12 @@ async function getBasicInfo(stockId) {
             headers: params[1],
         });
         const stockData = body.data;
+        console.log(stockData)
         return {
             name: stockData.name,
             code: stockData.code,
             companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
+            wicsSectorName: stockData.wicsSectorName,
             openingPrice: stockData.openingPrice,
             highPrice: stockData.highPrice,
             lowPrice: stockData.lowPrice,

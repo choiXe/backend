@@ -17,6 +17,7 @@ date: 조회 시작 기간   // (Format: YYYY-MM-dd)
 name (String)                   // 종목 이름
 code (String)                   // 종목 ISU 코드
 companySummary (String)         // 기업 개요
+wicsSectorName (String)         // WICS 섹터
 openingPrice (Int)              // 시가
 highPrice (Int)                 // 고가
 lowPrice (Int)                  // 저가
