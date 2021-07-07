@@ -29,7 +29,7 @@ async function getSectorInfo(stockId) {
             },
         })
     } catch (e) {
-        console.log('[dailyReportTask.js]: Error in getSectorInfo');
+        console.log('[reportTask.js]: Error in getSectorInfo');
     }
 
     const sSector = sBody.data.wicsSectorName.replace(/ /g, '');
