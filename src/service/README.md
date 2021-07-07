@@ -17,8 +17,12 @@ date: 조회 시작 기간   // (Format: YYYY-MM-dd)
 name (String)                   // 종목 이름
 code (String)                   // 종목 ISU 코드
 companySummary (String)         // 기업 개요
+openingPrice (Int)              // 시가
+highPrice (Int)                 // 고가
+lowPrice (Int)                  // 저가
 tradePrice (Int)                // 현재 가격
-changeRate (Float)              // 변동폭
+changePrice (Int)               // 가격 변동 (원)
+changeRate (Float)              // 가격 변동 (%)
 marketCap (String)              // 시가 총액
 high52wPrice (Int)              // 52주 최고가
 low52wPrice (Int)               // 52주 최저가

@@ -15,7 +15,7 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 axios.defaults.timeout = timeoutLimit;
 
 /**
- * Returns stock data of past 3 months
+ * Returns stock data of past year
  * @param stockId 6 digit number code of stock
  */
 async function getPastData(stockId) {
@@ -23,7 +23,7 @@ async function getPastData(stockId) {
     let prices = [];
 
     try {
-        body = await axios.get(pastDataUrl(stockId, 91, 'day'));
+        body = await axios.get(pastDataUrl(stockId, 250, 'day'));
     } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
@@ -77,8 +77,14 @@ async function getBasicInfo(stockId) {
             name: stockData.name,
             code: stockData.code,
             companySummary: stockData.companySummary.replace(/^\s+|\s+$/g, ''),
+            openingPrice: stockData.openingPrice,
+            highPrice: stockData.highPrice,
+            lowPrice: stockData.lowPrice,
             tradePrice: stockData.tradePrice,
-            changeRate: round1Deci(stockData.changeRate * 100),
+            changePrice: stockData.change === 'FALL' ?
+                -stockData.changePrice : stockData.changePrice,
+            changeRate: stockData.change === 'FALL' ?
+                -round1Deci(stockData.changeRate * 100) : round1Deci(stockData.changeRate * 100),
             marketCap: numToKR(stockData.marketCap).replace('+', ''),
             high52wPrice: parseInt(stockData.high52wPrice),
             low52wPrice: parseInt(stockData.low52wPrice),
@@ -112,6 +118,7 @@ async function getNews(stockName) {
             a = item.pubDate.split(' ');
             newsList.push({
                 title: item.title.replace(/(&quot;|<([^>]+)>)/ig, ''),
+                description: item.description.replace(/(&quot;|<([^>]+)>)/ig, ''),
                 date: a[3] + '-' + month[a[2]] + '-' + a[1],
                 link: item.link
             })
@@ -221,6 +228,7 @@ async function getStockOverview(stockId, date) {
     })
     stockObj.newsTitles = stockObj.newsTitles.replace(/  +/g, ' ');
 
+    console.log(stockObj);
     return stockObj;
 }
 
