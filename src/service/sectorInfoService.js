@@ -1,9 +1,8 @@
 const axios = require('axios');
 const AWS = require('aws-sdk');
 
-const {getScore} = require('../tasks/scoreTask.js');
 const {region, timeoutLimit} = require('../data/constants.js');
-const {sectorInfoQuery} = require('../data/queries.js');
+const {sectorInfoQuery, getScoreQuery} = require('../data/queries.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
 const {round1Deci} = require('../tools/formatter.js');
 
@@ -61,7 +60,9 @@ async function getStockList(sector, date) {
             yList[sList[i].sSector] = [];
         }
         yList[sList[i].sSector].push(sList[i].expYield);
-        sList[i].score = getScore(sList[i].expYield, sList[i].cCount);
+        sList[i].score = (await docClient.query(
+            getScoreQuery(sList[i].stockId)).promise()).Items[0].score;
+
         delete sList[i].price;
     }
 

@@ -67,4 +67,48 @@ function scoreQuery(sector) {
     };
 }
 
-module.exports = {stockInfoQuery, sectorInfoQuery, scoreQuery};
+/**
+ * Query for scoreTask.js
+ * @param stockId 6 digit number code of stock
+ * @param score investment attractiveness score
+ * @param date current date
+ */
+function scoreQuery2(stockId, score, date) {
+    return {
+        TableName: 'stockScore',
+        Key: {
+            'stockId': stockId
+        },
+        UpdateExpression: 'set #score = :score, #dt = :date',
+        ExpressionAttributeNames: {
+            '#dt': 'date',
+            '#score': 'score'
+        },
+        ExpressionAttributeValues: {
+            ':score': score,
+            ':date': date
+        }
+    }
+}
+
+/**
+ * Query for retrieving score from database
+ * @param stockId 6 digit number code of stock
+ */
+function getScoreQuery(stockId) {
+    return {
+        TableName: 'stockScore',
+        ProjectionExpression: '#score',
+        KeyConditionExpression: '#stockId = :stockId',
+        ExpressionAttributeNames: {
+            '#stockId': 'stockId',
+            '#score': 'score'
+        },
+        ExpressionAttributeValues: {
+            ':stockId': stockId
+        }
+    };
+}
+
+module.exports = {stockInfoQuery, sectorInfoQuery,
+    scoreQuery, scoreQuery2, getScoreQuery};

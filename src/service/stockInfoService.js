@@ -2,9 +2,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 
-const {getScore} = require('../tasks/scoreTask.js');
 const {region, timeoutLimit, month} = require('../data/constants.js');
-const {stockInfoQuery} = require('../data/queries.js');
+const {stockInfoQuery, getScoreQuery} = require('../data/queries.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
 const {numToKR, round1Deci, getPastDate} = require('../tools/formatter.js');
 const {daumParams, newsUrl, pastDataUrl, investorUrl} =
@@ -73,7 +72,6 @@ async function getBasicInfo(stockId) {
             headers: params[1],
         });
         const stockData = body.data;
-        console.log(stockData)
         return {
             name: stockData.name,
             code: stockData.code,
@@ -216,7 +214,8 @@ async function getStockOverview(stockId, date) {
             stockObj.tradePrice - 1) * 100);
     }
 
-    stockObj.recommend = getScore(stockObj.expYield, avgPrice[1]);
+    stockObj.score = (await docClient.query(
+        getScoreQuery(stockId)).promise()).Items[0].score;
     promises = [getPastData(stockId), getInvestor(basicInfo.code), getNews(basicInfo.name)];
 
     try { promises = await Promise.all(promises); } catch (e) {}
