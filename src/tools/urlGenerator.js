@@ -1,7 +1,7 @@
 function generateUrl(baseUrl, params) {
     let url = baseUrl + '?';
-    for (let i=0; i<params.length; i++) {
-        url += `${i}=${params[i]}&`
+    for (const property in params) {
+        url += `${property}=${params[property]}&`
     }
     return url;
 }
@@ -45,6 +45,7 @@ function investorUrl(stockISU) {
         askBid: 3,
         trdVolVal: 2
     }
+    console.log(generateUrl(url, params));
     return generateUrl(url, params);
 }
 
