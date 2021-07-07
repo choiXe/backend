@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 const {region, timeoutLimit} = require('../data/constants.js');
 const {lSectors} = require('../data/wicsDictionary.js');
 const {strToNum} = require('../tools/formatter.js');
-const {scoreQuery} = require('../data/queries.js');
+const {scoreQuery, scoreQuery2} = require('../data/queries.js');
 const {naverApiUrl2, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
@@ -25,28 +25,6 @@ async function getIdList() {
         reportList.push.apply(reportList,
             (await docClient.query(scoreQuery(sector)).promise()).Items);
     }
-
-    /*
-
-    Sample reportList for testing
-    Comment out line 22~27 in order to test
-
-    let reportList = [{ priceGoal: '265000', date: '2021-07-07', stockId: '018260' },
-        { priceGoal: '68000', date: '2021-07-07', stockId: '240810' },
-        { priceGoal: '215000', date: '2021-07-07', stockId: '009150' },
-        { priceGoal: '70000', date: '2021-07-07', stockId: '213420' },
-        { priceGoal: '66000', date: '2021-07-06', stockId: '336260' },
-        { priceGoal: '70500', date: '2021-07-06', stockId: '213420' },
-        { priceGoal: '900000', date: '2021-07-06', stockId: '006400' },
-        { priceGoal: '210000', date: '2021-07-06', stockId: '058470' },
-        { priceGoal: '0', date: '2021-07-06', stockId: '083310' },
-        { priceGoal: '0', date: '2021-07-05', stockId: '319660' },
-        { priceGoal: '24000', date: '2021-07-05', stockId: '086960' },
-        { priceGoal: '220000', date: '2021-07-05', stockId: '058470' },
-        { priceGoal: '0', date: '2021-07-05', stockId: '376190' },
-        { priceGoal: '0', date: '2021-07-05', stockId: '049080' }];
-
-     */
 
     reportList.forEach(item => {
         price = parseInt(item.priceGoal);
@@ -78,12 +56,13 @@ async function getIdList() {
 }
 
 /**
- * Returns stockList after adding tradePrice, avgYield, PER, PBR, and ROE
- * @param stockList list of stocks
+ * Adds data, calculates score, and saves in database
  */
-async function addBasicInfo(stockList) {
-    let body, tmp;
-    let stockId;
+async function saveScore() {
+    let body, tmp, stockId;
+    const date = new Date().toISOString().slice(0, 10);
+    const stockList = await getIdList();
+
     try {
         body = (await axios.get(naverApiUrl2(stockList.query)))
             .data.result.areas[0].datas;
@@ -91,17 +70,23 @@ async function addBasicInfo(stockList) {
     } catch (e) {}
     for (const item of body) {
         stockId = item.cd;
+        console.log('Working on: ' + stockId);
         tmp = stockList[stockId];
         tmp.tradePrice = item.nv;
         tmp.expYield = tmp.priceAvg / item.nv;
         tmp.per = item.nv / item.eps;
         tmp.pbr = item.nv / item.bps;
         tmp.roe = item.eps / item.bps;
-        console.log('Working on: ' + stockId);
         tmp.fData = await getFinancialData(stockId);
         tmp.popularity = await getPopularity(stockId);
         tmp.financial = await calGFinancial(tmp);
         tmp.score = calScore(tmp);
+
+        docClient.update(scoreQuery2(stockId, tmp.score, date), function (err) {
+            if (err) {
+                console.log('[scoreTask]: Error ', err);
+            }
+        });
     }
     return stockList;
 }
@@ -203,19 +188,6 @@ function calGFinancial(stockItem) {
 }
 
 /**
- * Calculates investment attractiveness score of growth stock
- * @param stockObj stock object
- */
-function calScore(stockObj) {
-    let popScore = calPopScore(stockObj); // 데이터 부족 리턴할 수도 있음
-    let finScore = calFinScore(stockObj);
-    let credScore = calCredScore(stockObj);
-
-    if (popScore === '-' || finScore === '-') return '데이터 부족';
-    return Math.round((credScore + popScore + finScore) / 3);
-}
-
-/**
  * Returns popularity score (max 100)
  * - volume: 거래량 (증가할수록 점수 ↑)
  * - momentum: 모멘텀 수치 (높을수록 점수 ↑)
@@ -286,7 +258,13 @@ function calCredScore(stockObj) {
     stockObj.countPrice > 10 ? count = 10 :
         count = stockObj.countPrice;
 
-    return (expYield + count) * 5;
+    const credScore = (expYield + count) * 5;
+
+    if (isNaN(credScore)) {
+        return 0;
+    } else {
+        return credScore;
+    }
 }
 
 /**
@@ -309,7 +287,7 @@ function calFinScore(stockObj) {
     let pegScore, niScore;
     const financial = stockObj.financial;
     const niDif = financial.niGrowth1yr - financial.niGrowth2yr;
-    if (isNaN(financial.peg)) return '-';
+    if (isNaN(financial.peg) || isNaN(niDif)) return '-';
 
     if (financial.peg < 0.5) {
         pegScore = 100
@@ -328,43 +306,31 @@ function calFinScore(stockObj) {
     }
 
     if (niDif < 0) {
-        niScore += niDif;
+        if (Math.abs(niDif) > niScore) {
+            niScore = 0;
+        } else {
+            niScore += niDif;
+        }
     }
 
     return (pegScore + niScore) / 2;
 }
 
 /**
- * Returns score recommendation of a stock
- * @param expYield expected profit yield
- * @param consensusCount number of reports backing up priceGoal
+ * Calculates investment attractiveness score of growth stock
+ * Returns NaN if there isn't enough data
+ * @param stockObj stock object
  */
-function getScore(expYield, consensusCount) {
-    let a, b;
-    expYield >= 50 ? a = 10 : a = Math.abs(expYield) / 5;
-    consensusCount >= 10 ? b = 10 : b = consensusCount;
+function calScore(stockObj) {
+    let popScore = calPopScore(stockObj);
+    let finScore = calFinScore(stockObj);
+    let credScore = calCredScore(stockObj);
 
-    switch (consensusCount) {
-        case 1:
-            b -= 4; break;
-        case 2:
-            b -= 2; break;
-        case 3:
-            break;
-        case 4:
-            b += 1.5; break;
-        default:
-            b += 3;
-    }
-    return Math.sign(expYield) * Math.round(a + b) * 5;
+    if (popScore === '-' || finScore === '-') return '-';
+
+    return Math.round((credScore + popScore + finScore) / 3);
 }
 
-async function test() {
-    const a = await getIdList();
-    const b = await addBasicInfo(a);
-    console.log(b);
-}
+// saveScore().then();
 
-test();
-
-module.exports = {getScore};
+module.exports = {saveScore};
