@@ -53,7 +53,6 @@ async function getStockList(sector, date) {
         sList[i].expYield = round1Deci((sList[i].priceAvg /
             sList[i].tradePrice - 1) * 100);
         avgYield += sList[i].expYield;
-        sList[i].cCount = sList[i].price.length;
 
         // 각 섹터당 해당하는 종목 추가
         if (!yList[sList[i].sSector]) {
