@@ -331,6 +331,4 @@ function calScore(stockObj) {
     return Math.round((credScore + popScore + finScore) / 3);
 }
 
-// saveScore().then();
-
 module.exports = {saveScore};

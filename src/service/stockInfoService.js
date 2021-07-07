@@ -229,7 +229,6 @@ async function getStockOverview(stockId, date) {
     })
     stockObj.newsTitles = stockObj.newsTitles.replace(/  +/g, ' ');
 
-    console.log(stockObj);
     return stockObj;
 }
 

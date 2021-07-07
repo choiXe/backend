@@ -106,7 +106,6 @@ async function updateReportData() {
                                     sSector: {S: sectorInfo['sSector']}
                                 }
                             }
-                            console.log(params);
                             ddb.putItem(params, function (err) {
                                 if (err) {
                                     console.log('[dailyReportTask]: Error ', err);
@@ -123,4 +122,4 @@ async function updateReportData() {
     })
 }
 
-updateReportData().then();
+module.exports = {updateReportData};
