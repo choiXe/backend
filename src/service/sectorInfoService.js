@@ -23,6 +23,7 @@ async function getStockList(sector, date) {
 
     const priceList = (await docClient.query(
         sectorInfoQuery(sector, date)).promise()).Items;
+
     for (const item of priceList) {
         if (item.priceGoal !== '0') {
             if (!pList[item.stockName]) {
@@ -36,41 +37,41 @@ async function getStockList(sector, date) {
                     sSector: item.sSector,
                     tradePrice: body.data.now,
                     changeRate: body.data.rate,
-                    price: []
+                    priceAvg: 0,
+                    count: 0
                 };
             }
-            pList[item.stockName].price.push(parseInt(item.priceGoal));
+            pList[item.stockName].priceAvg += parseInt(item.priceGoal);
+            pList[item.stockName].count++;
         }
     }
 
-    for (let i in pList) {
-        sList.push(pList[i]);
-    }
-
-    for (const i in sList) {
-        sList[i].priceAvg = Math.round(sList[i].price
-            .reduce((a, b) => a + b, 0) / sList[i].price.length);
+    let i = 0;
+    for (const item in pList) {
+        sList.push(pList[item]);
+        sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].count);
         sList[i].expYield = round1Deci((sList[i].priceAvg /
             sList[i].tradePrice - 1) * 100);
         avgYield += sList[i].expYield;
 
         // 각 섹터당 해당하는 종목 추가
         if (!yList[sList[i].sSector]) {
-            yList[sList[i].sSector] = [];
+            yList[sList[i].sSector] = [0, 0];
         }
-        yList[sList[i].sSector].push(sList[i].expYield);
+        yList[sList[i].sSector][0] += sList[i].expYield;
+        yList[sList[i].sSector][1]++;
         sList[i].score = (await docClient.query(
             getScoreQuery(sList[i].stockId)).promise()).Items[0].score;
 
-        delete sList[i].price;
+        delete sList[i++].count
     }
 
-    // 섹터별로 expYield 구하기
+    // Calculate expYield of each sector
     for (const i in yList) {
-        yList[i] = yList[i].reduce((a, b) => a + b, 0) / yList[i].length;
+        yList[i] = yList[i][0] / yList[i][1];
     }
 
-    // expYield 가 제일 높은 하위 3개 섹터 분류 구하기
+    // Get top 3 sectors with highest expYield
     const topList = Object.keys(yList)
         .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
     sList.top3List = {
@@ -82,7 +83,7 @@ async function getStockList(sector, date) {
         thirdYield: round1Deci(yList[topList[2]]),
     }
 
-    sList.avgYield = avgYield / Object.keys(sList).length;
+    sList.avgYield = round1Deci(avgYield / Object.keys(sList).length);
     return sList;
 }
 
@@ -94,7 +95,7 @@ async function getStockList(sector, date) {
 async function getSectorOverview(sector, date) {
     let sectorObj = {};
     sectorObj.stockList = await getStockList(sector, date);
-    sectorObj.avgYield = round1Deci(sectorObj.stockList.avgYield);
+    sectorObj.avgYield = sectorObj.stockList.avgYield;
     sectorObj.top3List = sectorObj.stockList.top3List;
     delete sectorObj.stockList.avgYield;
     delete sectorObj.stockList.top3List;
