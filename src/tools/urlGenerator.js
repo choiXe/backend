@@ -45,7 +45,7 @@ function investorUrl(stockISU) {
         askBid: 3,
         trdVolVal: 2
     }
-    console.log(generateUrl(url, params));
+
     return generateUrl(url, params);
 }
 

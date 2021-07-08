@@ -36,7 +36,7 @@ async function getPastData(stockId) {
             low: parseInt(tmp[3]),
             end: parseInt(tmp[4]),
             volume: parseInt(tmp[5])
-        })
+        });
     });
     return prices;
 }
@@ -54,7 +54,7 @@ async function getReports(stockId, date) {
         if (report.date >= date) {
             dateReport.push(report);
         }
-    })
+    });
 
     return [allReport, dateReport];
 }
@@ -92,7 +92,7 @@ async function getBasicInfo(stockId) {
             per: stockData.per,
             pbr: stockData.pbr,
             roe: round1Deci((stockData.eps / stockData.bps) * 100.0)
-        }
+        };
     } catch (e) {
         console.log('[stockInfoService]: Error in getBasicInfo');
         return false;
@@ -154,12 +154,12 @@ async function getInvestor(stockISU) {
         })
     } catch (error) {
         if (error.code === 'ECONNABORTED') {
-            return {
+            return [{
                 date: getPastDate(0),
                 individual: '',
                 foreign: '점검중',
                 institutions: ''
-            }
+            }]
         }
         console.log('[stockInfoService]: Could not connect to KRX');
     }
