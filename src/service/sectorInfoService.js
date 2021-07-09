@@ -1,5 +1,6 @@
 const axios = require('axios');
 const AWS = require('aws-sdk');
+const Iconv = require('iconv-lite');
 
 const {region, timeoutLimit} = require('../data/constants.js');
 const {sectorInfoQuery, getScoreQuery} = require('../data/queries.js');
@@ -18,60 +19,72 @@ axios.defaults.timeout = timeoutLimit;
  */
 async function getStockList(sector, date) {
     let body;
-    let sList = [], yList = {}, pList = {};
+    let sList = [], yList = {}, pList = {}, tmpList = {};
     let avgYield = 0.0;
+    let stockIds = '';
 
     const priceList = (await docClient.query(
         sectorInfoQuery(sector, date)).promise()).Items;
 
-    for (const item of priceList) {
-        if (item.priceGoal !== '0') {
-            if (!pList[item.stockName]) {
-                try {
-                    body = await axios.get(naverApiUrl(item.stockId));
-                } catch (e) { console.log('[sectorService]: Error in getStockList'); }
+    priceList.forEach(item => { tmpList[item.stockId] = 1; });
+    for (const [key] of Object.entries(tmpList)) { stockIds += key + ','; }
 
-                pList[item.stockName] = {
-                    stockName: item.stockName,
-                    stockId: item.stockId,
-                    sSector: item.sSector,
-                    tradePrice: body.data.now,
-                    changeRate: body.data.rate,
-                    priceAvg: 0,
-                    count: 0
-                };
-            }
-            pList[item.stockName].priceAvg += parseInt(item.priceGoal);
-            pList[item.stockName].count++;
+    try {
+        body = (await axios.get(naverApiUrl(stockIds),
+            {responseEncoding: 'binary', responseType : 'arraybuffer'}));
+    } catch (e) {}
+
+    body = JSON.parse(Iconv.decode(body.data, 'EUC-KR')).result.areas[0].datas;
+
+    for (const item of body) {
+        pList[item.cd] = {
+            stockName: item.nm,
+            stockId: item.cd,
+            tradePrice: item.nv,
+            changeRate: item.sv >= item.nv ? item.cr : -item.cr,
+            priceAvg: 0,
+            count: 0
+        }
+    }
+
+    for (const item of priceList) {
+        pList[item.stockId].sSector = item.sSector;
+        if (item.priceGoal !== '0') {
+            pList[item.stockId].priceAvg += parseInt(item.priceGoal);
+            pList[item.stockId].count++;
         }
     }
 
     let i = 0;
     for (const item in pList) {
-        sList.push(pList[item]);
-        sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].count);
-        sList[i].expYield = round1Deci((sList[i].priceAvg /
-            sList[i].tradePrice - 1) * 100);
-        avgYield += sList[i].expYield;
+        if (pList[item].count !== 0) {
+            sList.push(pList[item]);
+            sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].count);
+            sList[i].expYield = round1Deci((sList[i].priceAvg /
+                sList[i].tradePrice - 1) * 100);
+            avgYield += sList[i].expYield;
 
-        // 각 섹터당 해당하는 종목 추가
-        if (!yList[sList[i].sSector]) {
-            yList[sList[i].sSector] = [0, 0];
+            // 각 섹터당 해당하는 종목 추가
+            if (!yList[sList[i].sSector]) {
+                yList[sList[i].sSector] = [0, 0];
+            }
+            yList[sList[i].sSector][0] += sList[i].expYield;
+            yList[sList[i].sSector][1]++;
+            try {
+                sList[i].score = (await docClient.query(
+                    getScoreQuery(sList[i].stockId)).promise()).Items[0].score;
+            } catch (e) {
+                sList[i].score = '-';
+            }
+
+            delete sList[i++].count
         }
-        yList[sList[i].sSector][0] += sList[i].expYield;
-        yList[sList[i].sSector][1]++;
-        sList[i].score = (await docClient.query(
-            getScoreQuery(sList[i].stockId)).promise()).Items[0].score;
-
-        delete sList[i++].count
     }
 
-    // Calculate expYield of each sector
     for (const i in yList) {
         yList[i] = yList[i][0] / yList[i][1];
     }
 
-    // Get top 3 sectors with highest expYield
     const topList = Object.keys(yList)
         .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
     sList.top3List = {
