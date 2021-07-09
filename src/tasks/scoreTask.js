@@ -6,7 +6,7 @@ const {region, timeoutLimit} = require('../data/constants.js');
 const {lSectors} = require('../data/wicsDictionary.js');
 const {strToNum} = require('../tools/formatter.js');
 const {scoreQuery, scoreQuery2} = require('../data/queries.js');
-const {naverApiUrl2, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator.js');
+const {naverApiUrl, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -64,7 +64,7 @@ async function saveScore() {
     const stockList = await getIdList();
 
     try {
-        body = (await axios.get(naverApiUrl2(stockList.query)))
+        body = (await axios.get(naverApiUrl(stockList.query)))
             .data.result.areas[0].datas;
         delete stockList.query;
     } catch (e) {}
@@ -331,4 +331,5 @@ function calScore(stockObj) {
     return Math.round((credScore + popScore + finScore) / 3);
 }
 
+saveScore().then();
 module.exports = {saveScore};

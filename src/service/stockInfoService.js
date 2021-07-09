@@ -5,7 +5,7 @@ const AWS = require('aws-sdk');
 const {region, timeoutLimit, month} = require('../data/constants.js');
 const {stockInfoQuery, getScoreQuery} = require('../data/queries.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
-const {numToKR, round1Deci, getPastDate} = require('../tools/formatter.js');
+const {numToKR, round1Deci} = require('../tools/formatter.js');
 const {daumParams, newsUrl, pastDataUrl, investorUrl} =
     require('../tools/urlGenerator.js');
 
@@ -155,10 +155,10 @@ async function getInvestor(stockISU) {
     } catch (error) {
         if (error.code === 'ECONNABORTED') {
             return [{
-                date: getPastDate(0),
-                individual: '',
-                foreign: '점검중',
-                institutions: ''
+                date: '점검중',
+                individual: 0,
+                foreign: 0,
+                institutions: 0
             }]
         }
         console.log('[stockInfoService]: Could not connect to KRX');

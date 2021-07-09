@@ -49,11 +49,7 @@ function investorUrl(stockISU) {
     return generateUrl(url, params);
 }
 
-function naverApiUrl(stockId) {
-    return 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=' + stockId;
-}
-
-function naverApiUrl2(stockIds) {
+function naverApiUrl(stockIds) {
     return 'https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:' + stockIds;
 }
 
@@ -62,4 +58,4 @@ function wiseReportUrl(stockId) {
 }
 
 module.exports = {daumParams, newsUrl, pastDataUrl, investorUrl,
-    naverApiUrl, naverApiUrl2, wiseReportUrl};
+    naverApiUrl, wiseReportUrl};
