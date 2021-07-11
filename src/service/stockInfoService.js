@@ -214,8 +214,13 @@ async function getStockOverview(stockId, date) {
             stockObj.tradePrice - 1) * 100);
     }
 
-    stockObj.score = (await docClient.query(
-        getScoreQuery(stockId)).promise()).Items[0].score;
+    try {
+        stockObj.score = (await docClient.query(
+            getScoreQuery(stockId)).promise()).Items[0].score;
+    } catch (e) {
+        stockObj.score = '-';
+    }
+
     promises = [getPastData(stockId), getInvestor(basicInfo.code), getNews(basicInfo.name)];
 
     try { promises = await Promise.all(promises); } catch (e) {}
@@ -225,7 +230,8 @@ async function getStockOverview(stockId, date) {
     stockObj.news = promises[2];
     stockObj.newsTitles = '';
     stockObj.news.forEach(item => {
-        stockObj.newsTitles += item.title.replace(reg, ' ') + ' ';
+        stockObj.newsTitles += item.title.replace(stockObj.name, '')
+            .replace(/ *\[[^)]*] */g, "").replace(reg, ' ') + ' ';
     })
     stockObj.newsTitles = stockObj.newsTitles.replace(/  +/g, ' ');
 

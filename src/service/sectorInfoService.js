@@ -32,9 +32,10 @@ async function getStockList(sector, date) {
     try {
         body = (await axios.get(naverApiUrl(stockIds),
             {responseEncoding: 'binary', responseType : 'arraybuffer'}));
-    } catch (e) {}
-
-    body = JSON.parse(Iconv.decode(body.data, 'EUC-KR')).result.areas[0].datas;
+        body = JSON.parse(Iconv.decode(body.data, 'EUC-KR')).result.areas[0].datas;
+    } catch (e) {
+        return 'No Data';
+    }
 
     for (const item of body) {
         pList[item.cd] = {
@@ -108,10 +109,36 @@ async function getStockList(sector, date) {
 async function getSectorOverview(sector, date) {
     let sectorObj = {};
     sectorObj.stockList = await getStockList(sector, date);
+    if (sectorObj.stockList === 'No Data') {
+        return {
+            stockList: [
+                {
+                    stockName: '데이터 없음',
+                    stockId: '',
+                    tradePrice: 0,
+                    changeRate: 0,
+                    priceAvg: 0,
+                    sSector: '',
+                    expYield: 0,
+                    score: 0
+                }
+            ],
+            avgYield: 0,
+            top3List: {
+                first: '',
+                firstYield: 0,
+                second: '',
+                secondYield: 0,
+                third: '',
+                thirdYield: 0
+            }
+        }
+    }
     sectorObj.avgYield = sectorObj.stockList.avgYield;
     sectorObj.top3List = sectorObj.stockList.top3List;
     delete sectorObj.stockList.avgYield;
     delete sectorObj.stockList.top3List;
+    console.log(sectorObj)
     return sectorObj;
 }
 
