@@ -44,23 +44,25 @@ async function getStockList(sector, date) {
             tradePrice: item.nv,
             changeRate: item.sv >= item.nv ? item.cr : -item.cr,
             priceAvg: 0,
+            pCount: 0,
             count: 0
         }
     }
 
     for (const item of priceList) {
         pList[item.stockId].sSector = item.sSector;
+        pList[item.stockId].count++;
         if (item.priceGoal !== '0') {
             pList[item.stockId].priceAvg += parseInt(item.priceGoal);
-            pList[item.stockId].count++;
+            pList[item.stockId].pCount++;
         }
     }
 
     let i = 0;
     for (const item in pList) {
-        if (pList[item].count !== 0) {
+        if (pList[item].pCount !== 0) {
             sList.push(pList[item]);
-            sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].count);
+            sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].pCount);
             sList[i].expYield = round1Deci((sList[i].priceAvg /
                 sList[i].tradePrice - 1) * 100);
             avgYield += sList[i].expYield;
@@ -78,7 +80,7 @@ async function getStockList(sector, date) {
                 sList[i].score = '-';
             }
 
-            delete sList[i++].count
+            delete sList[i++].pCount;
         }
     }
 
@@ -138,7 +140,6 @@ async function getSectorOverview(sector, date) {
     sectorObj.top3List = sectorObj.stockList.top3List;
     delete sectorObj.stockList.avgYield;
     delete sectorObj.stockList.top3List;
-    console.log(sectorObj)
     return sectorObj;
 }
 
