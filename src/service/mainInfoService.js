@@ -1,8 +1,11 @@
 const axios = require('axios');
+const cheerio = require('cheerio');
+const Iconv = require('iconv-lite');
 
 const {timeoutLimit} = require('../data/constants.js');
-const {indicatorUrlKR, indicatorUrlGlobal} = require('../tools/urlGenerator.js');
 const {round2Deci} = require('../tools/formatter.js');
+const {indicatorUrlKR, indicatorUrlGlobal, hankyungUrl} =
+    require('../tools/urlGenerator.js');
 
 axios.defaults.timeout = timeoutLimit;
 
@@ -74,10 +77,51 @@ async function getGlobalIndicator() {
 }
 
 /**
- * Returns 5 reports that are published recently
+ * Returns 10 reports that are published recently
  */
 async function getRecentReports() {
+    let body, reportList = [], reportObj;
 
+    try {
+        body = await axios.get(hankyungUrl(10), {responseType: 'arraybuffer'});
+        const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'));
+
+        $('.table_style01 tbody tr').each(function () {
+            const elem = $(this);
+
+            if (elem.find('td:nth-child(7) > div > a').attr('href') != null) {
+                let original = elem.find('strong').text();
+                if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
+                    console.log("Parsing unavailable > " + original);
+                } else {
+                    reportObj = {};
+                    reportObj['date'] = elem.find('td.first.txt_number').text();
+                    reportObj['stockName'] = original.split('(')[0];
+                    reportObj['stockId'] = original.split('(')[1].split(')')[0];
+
+                    if (reportObj['stockId'].length === 6
+                        && !isNaN(reportObj['stockId'])
+                        && reportObj['stockName'].length <= 20) {
+
+                        reportObj['reportName'] = original.split(')')[1];
+                        reportObj['priceGoal'] =
+                            elem.find('td.text_r.txt_number').text().replace(/,/g, '');
+                        reportObj['analyst'] =
+                            elem.find('td:nth-child(5)').text();
+                        reportObj['firm'] =
+                            elem.find('td:nth-child(6)').text();
+                        reportObj['reportIdx'] =
+                            elem.find('td.text_l > div > div').attr('id').substr(8, 6);
+
+                        reportList.push(reportObj);
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.log('[mainInfoService]: Error in getRecentReports');
+    }
+    return reportList;
 }
 
 /**
@@ -85,9 +129,9 @@ async function getRecentReports() {
  */
 async function getMainOverview() {
     return {
-        kr: getKRIndicator(),
-        global: getGlobalIndicator(),
-        reports: getRecentReports()
+        kr: await getKRIndicator(),
+        global: await getGlobalIndicator(),
+        reports: await getRecentReports()
     }
 }
 

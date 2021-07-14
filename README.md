@@ -52,6 +52,9 @@ async function test(func, type, startDate) {
     let overview;
 
     switch (func) {
+        case 'main':
+            overview = await getMainOverview();
+            break;
         case 'stock':
             overview = await getStockOverview(type, startDate);
             break;
@@ -64,8 +67,9 @@ async function test(func, type, startDate) {
     console.log(overview);
 }
 
-test('sector', 'IT', '2021-06-01');
-test('stock', '011070', '2021-06-01');
+test('main');
+test('stock', '011070', '2021-07-01');
+test('sector', 'IT', '2021-07-01');
 ```
 
 Run following command in terminal.
@@ -100,6 +104,13 @@ Create a new lambda function from AWS console with DynamoDB Query permission.<br
 Upload by clicking **Upload from > .zip file**.
 
 #### Create test event
+
+Event: getMainInfo
+```
+{
+  "field": "getMainInfo"
+}
+```
 
 Event: getStockInfo
 ```

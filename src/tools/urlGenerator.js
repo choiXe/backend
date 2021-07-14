@@ -70,8 +70,12 @@ function indicatorUrlGlobal() {
     return [url, header];
 }
 
+function hankyungUrl(pageNum) {
+    return 'http://consensus.hankyung.com/apps.analysis/analysis.list?skinType=business&pagenum=' + pageNum;
+}
+
 module.exports = {
     daumParams, newsUrl, pastDataUrl,
     investorUrl, naverApiUrl, wiseReportUrl,
-    indicatorUrlKR, indicatorUrlGlobal
+    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
 };

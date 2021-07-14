@@ -1,5 +1,47 @@
 # Service Documentation
 
+## mainInfoService.js
+
+> Returns all data needed in the main page of choiXe
+
+### Request Parameters
+
+```
+None
+```
+
+### Response (mainObj)
+
+```javascript
+kr (List)                       // 국내 증시
+global (List)                   // 해외 증시
+reports (List)                  // 리포트 (최근 10개)
+```
+
+#### Structure (kr & global)
+
+```javascript
+name (String)                   // 지수 이름
+symbolCode (String)             // 지수 코드
+countryName (String)            // 해당 나라
+tradePrice (Float)              // 현재 지수
+changePrice (Float)             // 변동 (포인트)
+changeRate (Float)              // 변동률 (%)
+```
+
+#### Structure (reports)
+
+```javascript
+date (String)                   // 리포트 발행일
+stockName (String)              // 종목
+stockId (String)                // 종목 코드
+reportName (String)             // 리포트 제목
+priceGoal (String)              // 종목 목표가
+analyst (String)                // 애널리스트
+firm (String)                   // 증권사
+reportIdx (String)              // 리포트 url 파라미터
+```
+
 ## stockInfoService.js
 
 > Returns all data needed in the information page of a selected **stock** (stockObj)
