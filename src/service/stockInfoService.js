@@ -23,7 +23,9 @@ async function getPastData(stockId) {
 
     try {
         body = await axios.get(pastDataUrl(stockId, 250, 'day'));
-    } catch (error) { console.log('[stockInfoService]: Error in getPastPrice') }
+    } catch (error) {
+        console.log('[stockInfoService]: Error in getPastPrice')
+    }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
     $('item').each(function () {
@@ -123,7 +125,9 @@ async function getNews(stockName) {
                 link: item.link
             })
         })
-    } catch (e) { console.log('[stockInfoService]: Error from getNews'); }
+    } catch (e) {
+        console.log('[stockInfoService]: Error from getNews');
+    }
 
     return newsList;
 }
@@ -139,16 +143,16 @@ async function getInvestor(stockISU) {
         body = await axios.get(investorUrl(stockISU));
         body.data.output.forEach(info => {
             investInfo.push({
-                date: info.TRD_DD.replace(/\//g,'-'),
+                date: info.TRD_DD.replace(/\//g, '-'),
                 inKR: {
                     individual: numToKR(info.TRDVAL3),
                     foreign: numToKR(info.TRDVAL4),
                     institutions: numToKR(info.TRDVAL1)
                 },
                 inVal: {
-                    individual: parseInt(info.TRDVAL3.replace(/,/g,'')),
-                    foreign: parseInt(info.TRDVAL4.replace(/,/g,'')),
-                    institutions: parseInt(info.TRDVAL1.replace(/,/g,''))
+                    individual: parseInt(info.TRDVAL3.replace(/,/g, '')),
+                    foreign: parseInt(info.TRDVAL4.replace(/,/g, '')),
+                    institutions: parseInt(info.TRDVAL1.replace(/,/g, ''))
                 }
             })
         })
@@ -194,7 +198,10 @@ async function getStockOverview(stockId, date) {
     const reg = /[{}\/?.,;:|)*–~`‘’“”…!^\-_+<>@#$%&\\=('"]/gi;
 
     promises = [getBasicInfo(stockId), getReports(stockId, date)];
-    try { promises = await Promise.all(promises); } catch (e) {}
+    try {
+        promises = await Promise.all(promises);
+    } catch (e) {
+    }
 
     const basicInfo = promises[0];
     if (!basicInfo) return '존재하지 않는 종목입니다';
@@ -223,7 +230,10 @@ async function getStockOverview(stockId, date) {
 
     promises = [getPastData(stockId), getInvestor(basicInfo.code), getNews(basicInfo.name)];
 
-    try { promises = await Promise.all(promises); } catch (e) {}
+    try {
+        promises = await Promise.all(promises);
+    } catch (e) {
+    }
 
     stockObj.pastData = promises[0];
     stockObj.invStatistics = promises[1];

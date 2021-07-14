@@ -30,7 +30,7 @@ async function getIdList() {
         price = parseInt(item.priceGoal);
         id = item.stockId;
         if (!stockList[id]) {
-            stockList[id] = { stockId: id, count: 1 }
+            stockList[id] = {stockId: id, count: 1}
             if (price !== 0) {
                 stockList[id].price = [price];
                 stockList[id].countPrice = 1;
@@ -67,7 +67,8 @@ async function saveScore() {
         body = (await axios.get(naverApiUrl(stockList.query)))
             .data.result.areas[0].datas;
         delete stockList.query;
-    } catch (e) {}
+    } catch (e) {
+    }
     for (const item of body) {
         stockId = item.cd;
         console.log('Working on: ' + stockId);
@@ -99,7 +100,8 @@ async function getFinancialData(stockId) {
     let body, fData = [];
     try {
         body = await axios.get(wiseReportUrl(stockId));
-    } catch (e) {}
+    } catch (e) {
+    }
     const $ = cheerio.load(body.data);
     $('tbody tr').map(function () {
         fData.push({
@@ -127,7 +129,8 @@ async function getPopularity(stockId) {
     let vData = [], pData = [];
     try {
         body = await axios.get(pastDataUrl(stockId, 20, 'day'));
-    } catch (e) {}
+    } catch (e) {
+    }
     const $ = cheerio.load(body.data, {xmlMode: true});
 
     $('item').each(function () {

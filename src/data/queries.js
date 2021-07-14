@@ -110,5 +110,7 @@ function getScoreQuery(stockId) {
     };
 }
 
-module.exports = {stockInfoQuery, sectorInfoQuery,
-    scoreQuery, scoreQuery2, getScoreQuery};
+module.exports = {
+    stockInfoQuery, sectorInfoQuery,
+    scoreQuery, scoreQuery2, getScoreQuery
+};

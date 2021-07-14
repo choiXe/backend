@@ -14,7 +14,7 @@ function numToKR(number) {
         isNegative = true;
         number = number.substr(1);
     }
-    num = numToKorean(parseInt(number.replace(/,/g,'')), 'mixed');
+    num = numToKorean(parseInt(number.replace(/,/g, '')), 'mixed');
     num.indexOf('억') !== -1 ? num = num.substring(0, num.indexOf('억')) + '억'
         : num = num.substring(0, num.indexOf('만')) + '만';
 
@@ -42,6 +42,14 @@ function round1Deci(number) {
 }
 
 /**
+ * Returns rounded up number with 2 decimal place
+ * @param number a number
+ */
+function round2Deci(number) {
+    return Math.round(number * 100) / 100;
+}
+
+/**
  * Returns date before attr: daysAgo
  * @param daysAgo days
  */
@@ -51,4 +59,4 @@ function getPastDate(daysAgo) {
     return date.toISOString().slice(0, 10);
 }
 
-module.exports = {numToKR, strToNum, round1Deci, getPastDate};
+module.exports = {numToKR, strToNum, round1Deci, round2Deci, getPastDate};

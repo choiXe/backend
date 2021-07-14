@@ -26,12 +26,16 @@ async function getStockList(sector, date) {
     const priceList = (await docClient.query(
         sectorInfoQuery(sector, date)).promise()).Items;
 
-    priceList.forEach(item => { tmpList[item.stockId] = 1; });
-    for (const [key] of Object.entries(tmpList)) { stockIds += key + ','; }
+    priceList.forEach(item => {
+        tmpList[item.stockId] = 1;
+    });
+    for (const [key] of Object.entries(tmpList)) {
+        stockIds += key + ',';
+    }
 
     try {
         body = (await axios.get(naverApiUrl(stockIds),
-            {responseEncoding: 'binary', responseType : 'arraybuffer'}));
+            {responseEncoding: 'binary', responseType: 'arraybuffer'}));
         body = JSON.parse(Iconv.decode(body.data, 'EUC-KR')).result.areas[0].datas;
     } catch (e) {
         return 'No Data';

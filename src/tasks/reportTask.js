@@ -66,7 +66,7 @@ async function updateReportData() {
     let p = Promise.resolve();
     $('.table_style01 tbody tr').map(function () {
         const elem = $(this);
-        p = p.then(async function() {
+        p = p.then(async function () {
             if (elem.find('td:nth-child(7) > div > a').attr('href') != null) {
                 let original = elem.find('strong').text();
                 if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
@@ -117,7 +117,7 @@ async function updateReportData() {
             }
         })
     })
-    p.then(function() {
+    p.then(function () {
         console.log('[dailyReportTask]: update complete');
     })
 }
