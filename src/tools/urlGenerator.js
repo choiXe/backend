@@ -40,8 +40,8 @@ function investorUrl(stockISU) {
     let params = {
         bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
         isuCd: stockISU,
-        strtDd: startDate.toISOString().slice(0, 10).replace(/-/g,''),
-        endDd: endDate.toISOString().slice(0, 10).replace(/-/g,''),
+        strtDd: startDate.toISOString().slice(0, 10).replace(/-/g, ''),
+        endDd: endDate.toISOString().slice(0, 10).replace(/-/g, ''),
         askBid: 3,
         trdVolVal: 2
     }
@@ -57,5 +57,21 @@ function wiseReportUrl(stockId) {
     return 'https://comp.wisereport.co.kr/company/cF1002.aspx?finGubun=MAIN&frq=0&cmp_cd=' + stockId;
 }
 
-module.exports = {daumParams, newsUrl, pastDataUrl, investorUrl,
-    naverApiUrl, wiseReportUrl};
+function indicatorUrlKR() {
+    return 'https://polling.finance.naver.com/api/realtime?query=SERVICE_INDEX:KOSPI,KOSDAQ,KPI200';
+}
+
+function indicatorUrlGlobal() {
+    const url = 'https://finance.daum.net/api/global/quotes';
+    const header = {
+        referer: 'https://finance.daum.net/global',
+        'user-agent': 'Mozilla/5.0'
+    }
+    return [url, header];
+}
+
+module.exports = {
+    daumParams, newsUrl, pastDataUrl,
+    investorUrl, naverApiUrl, wiseReportUrl,
+    indicatorUrlKR, indicatorUrlGlobal
+};
