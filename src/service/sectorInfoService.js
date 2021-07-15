@@ -46,7 +46,7 @@ async function getStockList(sector, date) {
             stockName: item.nm,
             stockId: item.cd,
             tradePrice: item.nv,
-            changeRate: item.sv >= item.nv ? item.cr : -item.cr,
+            changeRate: item.nv >= item.sv ? item.cr : -item.cr,
             priceAvg: 0,
             pCount: 0,
             count: 0
