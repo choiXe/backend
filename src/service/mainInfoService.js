@@ -128,10 +128,17 @@ async function getRecentReports() {
  * Returns all information needed in main page
  */
 async function getMainOverview() {
+    let promises;
+    promises = [getKRIndicator(), getGlobalIndicator(), getRecentReports()];
+    try {
+        promises = await Promise.all(promises);
+    } catch (e) {
+    }
+
     return {
-        kr: await getKRIndicator(),
-        global: await getGlobalIndicator(),
-        reports: await getRecentReports()
+        kr: promises[0],
+        global: promises[1],
+        reports: promises[2]
     }
 }
 
