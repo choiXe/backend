@@ -148,6 +148,7 @@ stockName (String)              // 종목 이름
 stockId (String)                // 종목 코드
 sSector (String)                // 종목 소섹터
 tradePrice (Int)                // 현재 가격
+changePrice (Int)               // 가격 변동 (원)
 changeRate (Float)              // 가격 변동 (%)
 priceAvg (Int)                  // 애널리스트 목표가의 평균값
 expYield (Float)                // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
