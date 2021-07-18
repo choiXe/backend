@@ -62,12 +62,8 @@ function indicatorUrlKR() {
 }
 
 function indicatorUrlGlobal() {
-    const url = 'https://finance.daum.net/api/global/quotes';
-    const header = {
-        referer: 'https://finance.daum.net/global',
-        'user-agent': 'Mozilla/5.0'
-    }
-    return [url, header];
+    return 'https://query1.finance.yahoo.com/v7/finance/spark?symbols=' +
+        '%5EDJI,%5EGSPC,%5EIXIC,%5EFTSE,%5EGDAXI,%5EHSI,%5EN225,000001.SS&range=1d';
 }
 
 function hankyungUrl(pageNum) {

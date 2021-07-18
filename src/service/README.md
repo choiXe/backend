@@ -22,8 +22,6 @@ reports (List)                  // 리포트 (최근 10개)
 
 ```javascript
 name (String)                   // 지수 이름
-symbolCode (String)             // 지수 코드
-countryName (String)            // 해당 나라
 tradePrice (Float)              // 현재 지수
 changePrice (Float)             // 변동 (포인트)
 changeRate (Float)              // 변동률 (%)
