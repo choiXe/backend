@@ -51,7 +51,7 @@ async function getGlobalIndicator() {
         '^IXIC': '나스닥 종합',
         '^FTSE': 'FTSE 100',
         '^GDAXI': 'DAX',
-        '^HSI': 'H지수'
+        '^HSI': 'HSI'
     };
 
     try {

@@ -6,8 +6,10 @@ const {region, timeoutLimit, month} = require('../data/constants.js');
 const {stockInfoQuery, getScoreQuery} = require('../data/queries.js');
 const {X_NAVER_CLIENT_ID, X_NAVER_CLIENT_SECRET} = require('../data/apiKeys.js');
 const {numToKR, round1Deci} = require('../tools/formatter.js');
-const {daumParams, newsUrl, pastDataUrl, investorUrl} =
-    require('../tools/urlGenerator.js');
+const {
+    daumParams, newsUrl, pastDataUrl, investorUrl,
+    naverApiUrl, naverApiUrl2, naverWiseUrl, isuUrl
+} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -96,8 +98,56 @@ async function getBasicInfo(stockId) {
             roe: round1Deci((stockData.eps / stockData.bps) * 100.0)
         };
     } catch (e) {
-        console.log('[stockInfoService]: Error in getBasicInfo');
-        return false;
+        let data1, data2, data3;
+        let promises;
+
+        try {
+            promises = [
+                axios.get(naverWiseUrl(stockId)),
+                axios.get(naverApiUrl(stockId)),
+                axios.get(naverApiUrl2(stockId)),
+                axios.get(isuUrl(stockId))
+            ];
+
+            try {
+                promises = await Promise.all(promises);
+            } catch (e) {}
+
+            const $ = cheerio.load(promises[0].data);
+            data1 = promises[1].data.result.areas[0].datas[0];
+            data2 = promises[2].data;
+            data3 = promises[3];
+
+            let summary = '';
+            const tmp = $('#cTB11 tr:nth-child(2) .num')
+                .text().replace(/[,원]/g, '').split('/');
+
+            $('ul .dot_cmp').each(function () {
+                summary += $(this).text() + '\n';
+            });
+
+            return {
+                name: $('.name').text(),
+                code: data3.data.block1[0].full_code,
+                companySummary: summary,
+                wicsSectorName: $('.td0101 dt:nth-child(4)').text().substr(7),
+                openingPrice: data1.ov,
+                highPrice: data1.hv,
+                lowPrice: data1.lv,
+                tradePrice: data1.nv,
+                changePrice: data1.sv - data1.nv >= 0 ? -data1.cv : data1.cv,
+                changeRate: data1.sv - data1.nv >= 0 ? -data1.cr : data1.cr,
+                marketCap: data2.marketSum * 1000000,
+                high52wPrice: parseInt(tmp[0]),
+                low52wPrice: parseInt(tmp[1]),
+                foreignRatio: parseFloat($('#cTB11 tr:nth-child(8) .num')
+                    .text().trim().replace('%', '')),
+                per: data2.per,
+                pbr: data2.pbr,
+                roe: round1Deci((data1.eps / data1.bps) * 100)
+            };
+        } catch (e) {
+        }
     }
 }
 
@@ -167,7 +217,6 @@ async function getInvestor(stockISU) {
         }
         console.log('[stockInfoService]: Could not connect to KRX');
     }
-
     return investInfo;
 }
 
@@ -177,14 +226,17 @@ async function getInvestor(stockISU) {
  */
 async function getAverage(reportList) {
     let sum = 0, count = 0, tmp;
-    reportList.forEach(item => {
-        tmp = parseInt(item.priceGoal);
-        if (tmp !== 0) {
-            sum += tmp;
-            count++;
-        }
-    })
-    return [sum / count, count];
+    if (reportList !== null) {
+        reportList.forEach(item => {
+            tmp = parseInt(item.priceGoal);
+            if (tmp !== 0) {
+                sum += tmp;
+                count++;
+            }
+        })
+        return [sum / count, count];
+    }
+    return 0;
 }
 
 /**

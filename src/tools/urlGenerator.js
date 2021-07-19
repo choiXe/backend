@@ -31,6 +31,16 @@ function pastDataUrl(stockId, count, option) {
         stockId + '&count=' + count + '&timeframe=' + option;
 }
 
+function isuUrl(stockId) {
+    const url = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
+    let params = {
+        bld: 'dbms/comm/finder/finder_listisu',
+        mktsel: 'ALL',
+        searchText: stockId
+    }
+    return generateUrl(url, params);
+}
+
 function investorUrl(stockISU) {
     const endDate = new Date();
     const startDate = new Date();
@@ -53,6 +63,14 @@ function naverApiUrl(stockIds) {
     return 'https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:' + stockIds;
 }
 
+function naverApiUrl2(stockId) {
+    return 'https://api.finance.naver.com/service/itemSummary.naver?itemcode=' + stockId;
+}
+
+function naverWiseUrl(stockId) {
+    return 'https://navercomp.wisereport.co.kr/v2/company/c1010001.aspx?cmp_cd=' + stockId;
+}
+
 function wiseReportUrl(stockId) {
     return 'https://comp.wisereport.co.kr/company/cF1002.aspx?finGubun=MAIN&frq=0&cmp_cd=' + stockId;
 }
@@ -71,7 +89,7 @@ function hankyungUrl(pageNum) {
 }
 
 module.exports = {
-    daumParams, newsUrl, pastDataUrl,
-    investorUrl, naverApiUrl, wiseReportUrl,
-    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
+    daumParams, newsUrl, pastDataUrl, isuUrl,
+    investorUrl, naverApiUrl, naverWiseUrl, wiseReportUrl,
+    naverApiUrl2, indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
 };
