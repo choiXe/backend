@@ -5,7 +5,7 @@ const {naverApiUrl} = require('../tools/urlGenerator.js');
 
 axios.defaults.timeout = timeoutLimit;
 
-async function getPriceYield(stockIds) {
+async function getPriceRate(stockIds) {
     let body, data = [];
 
     try {
@@ -20,7 +20,9 @@ async function getPriceYield(stockIds) {
         });
     } catch (e) {
     }
-    return data;
+    return {
+        data: data
+    };
 }
 
-module.exports = {getPriceYield};
+module.exports = {getPriceRate};

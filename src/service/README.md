@@ -166,10 +166,10 @@ stockIds (String)               // 종목 코드 리스트 (Format: XXXXXX,XXXXX
 ### Response (dataObj)
 
 ```javascript
-pyData (List)                   // 가격 & 변동률 데이터
+data (List)                   // 가격 & 변동률 데이터
 ```
 
-#### Structure (pyData)
+#### Structure (data)
 
 ```javascript
 stockId (String)                // 종목 코드

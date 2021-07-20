@@ -62,7 +62,7 @@ async function test(func, type, startDate) {
             overview = await getSectorOverview(type, startDate);
             break;
         case 'favorite':
-            overview = await getPriceYield(type);
+            overview = await getPriceRate(type);
             break;
         default:
             overview = 'no matching function';
@@ -71,7 +71,7 @@ async function test(func, type, startDate) {
 }
 
 test('main');
-test('sector', 'IT', '2021-07-01');
+test('sector', '유틸리티', '2021-07-01');
 test('stock', '011070', '2021-07-01');
 test('favorite', '011070,383310,326030');
 ```
