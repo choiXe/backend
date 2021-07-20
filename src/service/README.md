@@ -6,7 +6,7 @@
 
 ### Request Parameters
 
-```
+```javascript
 None
 ```
 
@@ -47,8 +47,8 @@ reportIdx (String)              // 리포트 url 파라미터
 ### Request Parameters
 
 ```javascript
-stockId: 종목 코드    // (Format: 숫자 6자리 ######)
-date: 조회 시작 기간   // (Format: YYYY-MM-dd)
+stockId (String)                // 종목 코드
+date (String)                   // 조회 시작 기간 (Format: YYYY-MM-dd)
 ```
 
 ### Response (stockObj)
@@ -127,8 +127,8 @@ link (String)                   // 뉴스 링크
 ### Request Parameters
 
 ```javascript
-sector: 섹터         // (Format: String)
-date: 조회 시작 기간   // (Format: YYYY-MM-dd)
+sector (String)                 // 섹터
+date (String)                   // 조회 시작 기간 (Format: YYYY-MM-dd)
 ```
 
 ### Response (sectorObj)
@@ -151,4 +151,28 @@ changeRate (Float)              // 가격 변동 (%)
 priceAvg (Int)                  // 애널리스트 목표가의 평균값
 expYield (Float)                // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
 score (String)                  // 종목 점수 (투자 매력도)
+```
+
+## favoriteService.js
+
+> Returns price & rate data for favorites list
+
+### Request Parameters
+
+```javascript
+stockIds (String)               // 종목 코드 리스트 (Format: XXXXXX,XXXXXX,)
+```
+
+### Response (dataObj)
+
+```javascript
+pyData (List)                   // 가격 & 변동률 데이터
+```
+
+#### Structure (pyData)
+
+```javascript
+stockId (String)                // 종목 코드
+price (Int)                     // 현재 가격
+rate (Float)                    // 변동률 (%)
 ```

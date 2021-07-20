@@ -137,7 +137,7 @@ async function getBasicInfo(stockId) {
                 tradePrice: data1.nv,
                 changePrice: data1.sv - data1.nv >= 0 ? -data1.cv : data1.cv,
                 changeRate: data1.sv - data1.nv >= 0 ? -data1.cr : data1.cr,
-                marketCap: data2.marketSum * 1000000,
+                marketCap: numToKR(data2.marketSum * 1000000).replace('+', ''),
                 high52wPrice: parseInt(tmp[0]),
                 low52wPrice: parseInt(tmp[1]),
                 foreignRatio: parseFloat($('#cTB11 tr:nth-child(8) .num')
