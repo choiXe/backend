@@ -4,6 +4,7 @@ const {getStockOverview} = require('./service/stockInfoService.js');
 const {getSectorOverview} = require('./service/sectorInfoService.js');
 const {getMainOverview} = require('./service/mainInfoService.js');
 const {getPriceRate} = require('./service/favoriteService.js');
+const {getFinancial} = require('./service/financialService.js');
 
 exports.handler = (event, context, callback) => {
     const fnName = event.field;
@@ -22,6 +23,10 @@ exports.handler = (event, context, callback) => {
     } else if (fnName === 'getFavoriteInfo') {
         const {stockIds} = event.arguments;
         getPriceRate(stockIds)
+            .then(overview => callback(null, overview));
+    } else if (fnName === 'getFinancialInfo') {
+        const {stockId} = event.arguments;
+        getFinancial(stockId)
             .then(overview => callback(null, overview));
     } else {
         callback('no matching function');

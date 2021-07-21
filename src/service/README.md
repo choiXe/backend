@@ -176,3 +176,43 @@ stockId (String)                // 종목 코드
 price (Int)                     // 현재 가격
 rate (Float)                    // 변동률 (%)
 ```
+
+## financialService.js
+
+> Returns financial data of past 6 years
+
+### Request Parameters
+
+```javascript
+stockId (String)                // 종목 코드
+```
+
+### Response (dataObj)
+
+```javascript
+data (List)                     // 재무 데이터
+formatKR (List)                 // 숫자 데이터 (한국 단위 변환)
+```
+
+#### Structure (data)
+
+```javascript
+date (String)                   // 해당년월
+rv (Int)                        // 매출
+oProfit (Int)                   // 영업이익
+nProfit (Int)                   // 순이익
+oMargin (Float)                 // 영업이익률
+npMargin (Float)                // 순이익률
+rGrowth (Float)                 // 매출 증가율
+opGrowth (Float)                // 영업이익 증가율
+npGrowth (Float)                // 순이익 증가율
+```
+
+#### Structure (formatKR)
+
+```javascript
+date (String)                   // 해당년월
+rvKR (String)                   // 매출 (한국 단위 변환)
+oProfitKR (String)              // 영업이익 (한국 단위 변환)
+nProfitKR (String)              // 순이익 (한국 단위 변환)
+```

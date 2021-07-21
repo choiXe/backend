@@ -64,6 +64,9 @@ async function test(func, type, startDate) {
         case 'favorite':
             overview = await getPriceRate(type);
             break;
+        case 'financial':
+            overview = await getFinancial(type);
+            break;
         default:
             overview = 'no matching function';
     }
@@ -74,6 +77,7 @@ test('main');
 test('sector', '유틸리티', '2021-07-01');
 test('stock', '011070', '2021-07-01');
 test('favorite', '011070,383310,326030');
+test('financial', '011070');
 ```
 
 Run following command in terminal.
@@ -112,7 +116,10 @@ Upload by clicking **Upload from > .zip file**.
 Event: getMainInfo
 ```
 {
-  "field": "getMainInfo"
+  "field": "getMainInfo",
+  "arguments": {
+    "keyword": "main"
+  }
 }
 ```
 
@@ -134,6 +141,26 @@ Event: getSectorInfo
   "arguments": {
     "sectorName": "IT",
     "startDate": "2021-06-01"
+  }
+}
+```
+
+Event: getFavoriteInfo
+```
+{
+  "field": "getFavoriteInfo",
+  "arguments": {
+    "stockIds": "011070,383310,326030"
+  }
+}
+```
+
+Event: getFinancialInfo
+```
+{
+  "field": "getFinancialInfo",
+  "arguments": {
+    "stockIds": "011070"
   }
 }
 ```
