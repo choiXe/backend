@@ -32,6 +32,7 @@ async function getFinancial(stockId) {
                 npGrowth: round2Deci(cd2.series[2].data[i])
             });
             data2.push({
+                date: data[i].date,
                 rvKR: numToKR(data[i].rv).replace('+', ''),
                 oProfitKR: numToKR(data[i].oProfit).replace('+', ''),
                 nProfitKR: numToKR(data[i].nProfit).replace('+', ''),
