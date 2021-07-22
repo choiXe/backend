@@ -3,9 +3,9 @@ const cheerio = require('cheerio');
 const Iconv = require('iconv-lite');
 
 const {timeoutLimit} = require('../data/constants.js');
-const {round2Deci} = require('../tools/formatter.js');
+const {round2Deci, round1Deci} = require('../tools/formatter.js');
 const {
-    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
+    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl, naverApiUrl
 } = require('../tools/urlGenerator.js');
 
 axios.defaults.timeout = timeoutLimit;
@@ -79,6 +79,7 @@ async function getGlobalIndicator() {
  */
 async function getRecentReports() {
     let body, reportList = [], reportObj;
+    let stockIds = '', pList = {};
 
     try {
         body = await axios.get(hankyungUrl(10), {responseType: 'arraybuffer'});
@@ -104,18 +105,30 @@ async function getRecentReports() {
                         reportObj['reportName'] = original.split(')')[1];
                         reportObj['priceGoal'] =
                             elem.find('td.text_r.txt_number').text().replace(/,/g, '');
-                        reportObj['analyst'] =
-                            elem.find('td:nth-child(5)').text();
-                        reportObj['firm'] =
-                            elem.find('td:nth-child(6)').text();
                         reportObj['reportIdx'] =
                             elem.find('td.text_l > div > div').attr('id').substr(8, 6);
 
                         reportList.push(reportObj);
+                        stockIds += reportObj.stockId + ',';
                     }
                 }
             }
         });
+
+        body = (await axios.get(naverApiUrl(stockIds))).data.result.areas[0].datas;
+        for (const item of body) {
+            pList[item.cd] = {
+                stockId: item.cd,
+                tradePrice: item.nv
+            }
+        }
+        for (const item of reportList) {
+            item.tradePrice = pList[item.stockId].tradePrice;
+            item.priceGoal !== '0' ?
+                item.yield = round1Deci(((parseInt(item.priceGoal) / item.tradePrice) - 1) * 100) :
+                item.yield = '-';
+        }
+
     } catch (err) {
         console.log('[mainInfoService]: Error in getRecentReports');
     }
