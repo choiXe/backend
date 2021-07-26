@@ -5,7 +5,7 @@ const {numToKorean} = require('num-to-korean');
  * @param number a number
  */
 function numToKR(number) {
-    number = number.toString();
+    number = number.toString().replace('+', '');
     if (number === '0' ||
         (number.indexOf('-') !== -1 && number.length < 6)) return '-';
 
@@ -30,7 +30,7 @@ function numToKR(number) {
  * @param number a number
  */
 function strToNum(number) {
-    return parseFloat(number.replace(/,/g, ''));
+    return parseFloat(number.replace(/[,배원]/g, ''));
 }
 
 /**
@@ -59,4 +59,12 @@ function getPastDate(daysAgo) {
     return date.toISOString().slice(0, 10);
 }
 
-module.exports = {numToKR, strToNum, round1Deci, round2Deci, getPastDate};
+function numSeparator(num) {
+    if (num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    } else {
+        return num;
+    }
+}
+
+module.exports = {numToKR, strToNum, round1Deci, round2Deci, getPastDate, numSeparator};

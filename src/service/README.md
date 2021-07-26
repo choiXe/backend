@@ -53,43 +53,34 @@ date (String)                   // 조회 시작 기간 (Format: YYYY-MM-dd)
 
 ### Response (stockObj)
 
+> With thousands separator
+
 ```javascript
 name (String)                   // 종목 이름
-code (String)                   // 종목 ISU 코드
 companySummary (String)         // 기업 개요
 wicsSectorName (String)         // WICS 섹터
-openingPrice (Int)              // 시가
-highPrice (Int)                 // 고가
-lowPrice (Int)                  // 저가
-tradePrice (Int)                // 현재 가격
-changePrice (Int)               // 가격 변동 (원)
-changeRate (Float)              // 가격 변동 (%)
+lastClosePrice (String)         // 전날 종가
+openingPrice (String)           // 시가
+highPrice (String)              // 고가
+lowPrice (String)               // 저가
+tradePrice (String)             // 현재 가격
+changePrice (String)            // 가격 변동 (원)
+changeRate (String)             // 가격 변동 (%)
 marketCap (String)              // 시가 총액
-high52wPrice (Int)              // 52주 최고가
-low52wPrice (Int)               // 52주 최저가
-foreignRatio (Float)            // 외국인 소진률
-per (Float)                     // Price earning ratio
-pbr (Float)                     // Price-to-book ratio
-roe (Float)                     // Return on Equity
-priceAvg (Int)                  // 애널리스트 목표가의 평균값
-expYield (Float)                // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
+high52wPrice (String)           // 52주 최고가
+low52wPrice (String)            // 52주 최저가
+foreignRatio (String)           // 외국인 소진률
+per (String)                    // Price earning ratio
+pbr (String)                    // Price-to-book ratio
+roe (String)                    // Return on Equity
+priceAvg (String)               // 애널리스트 목표가의 평균값
+expYield (String)               // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
 score (String)                  // 종목 점수 (투자 매력도)
+reportList (List)               // 특정 기간 동안 발행된 리포트의 리스트
 pastData (List)                 // 최근 3달간의 종목 가격 및 거래량 데이터
-reportList (List)               // 특정 기간동안에 발행된 리포트의 리스트
 invStatistics (List)            // 최근 1달간의 투자자 동향
 news (List)                     // 회사 관련 뉴스
 newsTitles (String)             // Wordcloud 생성을 위한 뉴스 제목들
-```
-
-#### Structure (pastData)
-
-```javascript
-date (String)                   // 해당 날짜 (YYYY-MM-DD)
-start (Int)                     // 시가
-high (Int)                      // 고가
-low (Int)                       // 저가
-end (Int)                       // 종가
-volume (Int)                    // 거래량
 ```
 
 #### Structure (reportList)
@@ -103,12 +94,28 @@ analyst (String)                // 애널리스트
 reportIdx (String)              // 리포트 url 파라미터
 ```
 
+#### Structure (pastData)
+
+> Without thousands separator
+
+```javascript
+date (String)                   // 해당 날짜 (YYYY-MM-DD)
+start (String)                  // 시가
+high (String)                   // 고가
+low (String)                    // 저가
+end (String)                    // 종가
+volume (String)                 // 거래량
+```
+
 #### Structure (invStatistics)
 
 ```javascript
 date (String)                   // 기준 날짜
-inKR (List)                     // 거래량 (단위: 한국어)
-inVal (List)                    // 거래량 (단위: 숫자)
+value (List)                    // 매매동향 (단위: 숫자)
+    - individual (String)       // 개인 매매동향
+    - foreign (String)          // 외국인 매매동향
+    - institutions (String)     // 기관 매매동향
+}
 ```
 
 #### Structure (news)
@@ -166,7 +173,7 @@ stockIds (String)               // 종목 코드 리스트 (Format: XXXXXX,XXXXX
 ### Response (dataObj)
 
 ```javascript
-data (List)                   // 가격 & 변동률 데이터
+data (List)                     // 가격 & 변동률 데이터
 ```
 
 #### Structure (data)

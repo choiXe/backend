@@ -1,21 +1,3 @@
-function generateUrl(baseUrl, params) {
-    let url = baseUrl + '?';
-    for (const property in params) {
-        url += `${property}=${params[property]}&`
-    }
-    return url;
-}
-
-function daumParams(stockId) {
-    const url = 'https://finance.daum.net/api/quotes/A'
-        + stockId + '?summary=false&changeStatistics=true';
-    const header = {
-        referer: 'https://finance.daum.net/quotes/A' + stockId,
-        'user-agent': 'Mozilla/5.0'
-    };
-    return [url, header];
-}
-
 function newsUrl(stockName) {
     return 'https://openapi.naver.com/v1/search/news.json?query=' +
         encodeURI(stockName) + '&display=100&sort=sim';
@@ -26,32 +8,8 @@ function pastDataUrl(stockId, count, option) {
         stockId + '&count=' + count + '&timeframe=' + option;
 }
 
-function isuUrl(stockId) {
-    const url = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
-    let params = {
-        bld: 'dbms/comm/finder/finder_listisu',
-        mktsel: 'ALL',
-        searchText: stockId
-    }
-    return generateUrl(url, params);
-}
-
-function investorUrl(stockISU) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 31);
-    const url = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
-
-    let params = {
-        bld: 'dbms/MDC/STAT/standard/MDCSTAT02302',
-        isuCd: stockISU,
-        strtDd: startDate.toISOString().slice(0, 10).replace(/-/g, ''),
-        endDd: endDate.toISOString().slice(0, 10).replace(/-/g, ''),
-        askBid: 3,
-        trdVolVal: 2
-    }
-
-    return generateUrl(url, params);
+function investorUrl(stockId) {
+    return 'https://m.stock.naver.com/api/stock/' + stockId + '/trend?pageSize=31';
 }
 
 function naverApiUrl(stockIds) {
@@ -59,9 +17,12 @@ function naverApiUrl(stockIds) {
         'api/realtime?query=SERVICE_ITEM:' + stockIds;
 }
 
-function naverApiUrl2(stockId) {
-    return 'https://api.finance.naver.com/' +
-        'service/itemSummary.naver?itemcode=' + stockId;
+function naverIntegrationUrl(stockId) {
+    return 'https://m.stock.naver.com/api/stock/' + stockId + '/integration';
+}
+
+function naverBasicUrl(stockId) {
+    return 'https://m.stock.naver.com/api/stock/'+ stockId + '/basic';
 }
 
 function naverWiseUrl(stockId) {
@@ -96,7 +57,7 @@ function hankyungUrl(pageNum) {
 }
 
 module.exports = {
-    daumParams, newsUrl, pastDataUrl, isuUrl,
+    newsUrl, pastDataUrl, naverIntegrationUrl, naverBasicUrl,
     investorUrl, naverApiUrl, naverWiseUrl, naverFinancialUrl, wiseReportUrl,
-    naverApiUrl2, indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
+    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl
 };
