@@ -100,11 +100,11 @@ reportIdx (String)              // 리포트 url 파라미터
 
 ```javascript
 date (String)                   // 해당 날짜 (YYYY-MM-DD)
-start (String)                  // 시가
-high (String)                   // 고가
-low (String)                    // 저가
-end (String)                    // 종가
-volume (String)                 // 거래량
+start (Int)                  // 시가
+high (Int)                   // 고가
+low (Int)                    // 저가
+end (Int)                    // 종가
+volume (Int)                 // 거래량
 ```
 
 #### Structure (invStatistics)

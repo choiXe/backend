@@ -35,11 +35,11 @@ async function getPastData(stockId) {
         prices.push({
             date: tmp[0].substr(0, 4) + '-' +
                 tmp[0].substr(4, 2) + '-' + tmp[0].substr(6),
-            start: tmp[1],
-            high: tmp[2],
-            low: tmp[3],
-            end: tmp[4],
-            volume: tmp[5]
+            start: parseInt(tmp[1]),
+            high: parseInt(tmp[2]),
+            low: parseInt(tmp[3]),
+            end: parseInt(tmp[4]),
+            volume: parseInt(tmp[5])
         });
     });
     return prices;
@@ -219,8 +219,8 @@ async function getStockOverview(stockId, date) {
         stockObj.expYield = '0';
     } else {
         stockObj.priceAvg = numSeparator(Math.round(avgPrice[0]));
-        stockObj.expYield = round1Deci((strToNum(stockObj.priceAvg) /
-            strToNum(stockObj.tradePrice) - 1) * 100) + '%';
+        stockObj.expYield = Math.round((strToNum(stockObj.priceAvg) /
+            strToNum(stockObj.tradePrice) - 1) * 100) + '';
     }
     try {
         stockObj.score = (await docClient.query(
