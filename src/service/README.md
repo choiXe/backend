@@ -151,13 +151,13 @@ top3List (Dictionary)           // 섹터 안에 속한 상승 여력이 가장 
 ```javascript
 stockName (String)              // 종목 이름
 stockId (String)                // 종목 코드
-sSector (String)                // 종목 소섹터
-tradePrice (Int)                // 현재 가격
-changePrice (Int)               // 가격 변동 (원)
+tradePrice (String)             // 현재 가격
+changePrice (String)            // 가격 변동 (원)
 changeRate (Float)              // 가격 변동 (%)
-priceAvg (Int)                  // 애널리스트 목표가의 평균값
+priceAvg (String)               // 애널리스트 목표가의 평균값
+sSector (String)                // 종목 소섹터
 expYield (Float)                // 애널리스트 목표가의 평균값과 현재 가격의 괴리율
-score (String)                  // 종목 점수 (투자 매력도)
+score (Int)                     // 종목 점수 (투자 매력도)
 ```
 
 ## favoriteService.js

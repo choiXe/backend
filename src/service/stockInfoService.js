@@ -95,7 +95,7 @@ async function getBasicInfo(stockId) {
             tradePrice: numSeparator(strToNum(data.lastClosePrice.value) +
                 strToNum(body2.compareToPreviousClosePrice)),
             changePrice: body2.compareToPreviousClosePrice,
-            changeRate: body2.fluctuationsRatio + '%',
+            changeRate: body2.fluctuationsRatio,
             marketCap: data.marketValue.value,
             high52wPrice: data.highPriceOf52Weeks.value,
             low52wPrice: data.lowPriceOf52Weeks.value,

@@ -5,7 +5,7 @@ const Iconv = require('iconv-lite');
 const {region, timeoutLimit} = require('../data/constants.js');
 const {sectorInfoQuery, getScoreQuery} = require('../data/queries.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
-const {round1Deci} = require('../tools/formatter.js');
+const {round1Deci, numSeparator, strToNum} = require('../tools/formatter.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -45,8 +45,9 @@ async function getStockList(sector, date) {
         pList[item.cd] = {
             stockName: item.nm,
             stockId: item.cd,
-            tradePrice: item.nv,
-            changePrice: item.nv >= item.sv ? item.cv : -item.cv,
+            tradePrice: numSeparator(item.nv),
+            changePrice: item.nv >= item.sv ?
+                numSeparator(item.cv) : numSeparator(-item.cv),
             changeRate: item.nv >= item.sv ? item.cr : -item.cr,
             priceAvg: 0,
             pCount: 0,
@@ -67,9 +68,9 @@ async function getStockList(sector, date) {
     for (const item in pList) {
         if (pList[item].pCount !== 0) {
             sList.push(pList[item]);
-            sList[i].priceAvg = Math.round(sList[i].priceAvg / sList[i].pCount);
-            sList[i].expYield = round1Deci((sList[i].priceAvg /
-                sList[i].tradePrice - 1) * 100);
+            sList[i].priceAvg = numSeparator(Math.round(sList[i].priceAvg / sList[i].pCount));
+            sList[i].expYield = round1Deci((strToNum(sList[i].priceAvg) /
+                strToNum(sList[i].tradePrice) - 1) * 100);
             avgYield += sList[i].expYield;
 
             // 각 섹터당 해당하는 종목 추가
