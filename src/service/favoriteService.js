@@ -2,6 +2,7 @@ const axios = require('axios');
 
 const {timeoutLimit} = require('../data/constants.js');
 const {naverApiUrl} = require('../tools/urlGenerator.js');
+const {numSeparator} = require('../tools/formatter.js');
 
 axios.defaults.timeout = timeoutLimit;
 
@@ -14,7 +15,7 @@ async function getPriceRate(stockIds) {
         body.forEach(item => {
             data.push({
                 stockId: item.cd,
-                price: item.nv,
+                price: numSeparator(item.nv),
                 rate: item.sv < item.nv ? item.cr : -item.cr
             });
         });
