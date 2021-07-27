@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 const Iconv = require('iconv-lite');
 
 const {timeoutLimit} = require('../data/constants.js');
-const {round2Deci, round1Deci} = require('../tools/formatter.js');
+const {round2Deci, round1Deci, numSeparator, strToNum} = require('../tools/formatter.js');
 const {
     indicatorUrlKR, indicatorUrlGlobal, hankyungUrl, naverApiUrl
 } = require('../tools/urlGenerator.js');
@@ -26,8 +26,8 @@ async function getKRIndicator() {
         body.forEach(item => {
             kIndicators.push({
                 name: name[item.cd],
-                tradePrice: item.nv / 100,
-                changePrice: item.cv / 100,
+                tradePrice: numSeparator(item.nv / 100),
+                changePrice: numSeparator(item.cv / 100),
                 changeRate: item.cr
             });
         });
@@ -61,9 +61,9 @@ async function getGlobalIndicator() {
             changePrice = item.response[0].meta.previousClose;
             gIndicators.push({
                 name: name[item.symbol],
-                tradePrice: round2Deci(price),
+                tradePrice: numSeparator(round2Deci(price)),
                 changePrice:
-                    round2Deci(price - changePrice),
+                    numSeparator(round2Deci(price - changePrice)),
                 changeRate:
                     round2Deci(100 * (price - changePrice) / price)
             });
@@ -104,7 +104,7 @@ async function getRecentReports() {
 
                         reportObj['reportName'] = original.split(')')[1];
                         reportObj['priceGoal'] =
-                            elem.find('td.text_r.txt_number').text().replace(/,/g, '');
+                            elem.find('td.text_r.txt_number').text();
                         reportObj['reportIdx'] =
                             elem.find('td.text_l > div > div').attr('id').substr(8, 6);
 
@@ -119,13 +119,14 @@ async function getRecentReports() {
         for (const item of body) {
             pList[item.cd] = {
                 stockId: item.cd,
-                tradePrice: item.nv
+                tradePrice: numSeparator(item.nv)
             }
         }
         for (const item of reportList) {
             item.tradePrice = pList[item.stockId].tradePrice;
             item.priceGoal !== '0' ?
-                item.yield = round1Deci(((parseInt(item.priceGoal) / item.tradePrice) - 1) * 100) :
+                item.yield = round1Deci((
+                    (strToNum(item.priceGoal) / strToNum(item.tradePrice)) - 1) * 100) :
                 item.yield = '-';
         }
 

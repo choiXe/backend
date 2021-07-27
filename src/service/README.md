@@ -22,8 +22,8 @@ reports (List)                  // 리포트 (최근 10개)
 
 ```javascript
 name (String)                   // 지수 이름
-tradePrice (Float)              // 현재 지수
-changePrice (Float)             // 변동 (포인트)
+tradePrice (String)             // 현재 지수
+changePrice (String)            // 변동 (포인트)
 changeRate (Float)              // 변동률 (%)
 ```
 
@@ -35,9 +35,9 @@ stockName (String)              // 종목
 stockId (String)                // 종목 코드
 reportName (String)             // 리포트 제목
 priceGoal (String)              // 종목 목표가
-analyst (String)                // 애널리스트
-firm (String)                   // 증권사
 reportIdx (String)              // 리포트 url 파라미터
+tradePrice (String)             // 현재가
+yield (String)                  // 상승 여력
 ```
 
 ## stockInfoService.js
