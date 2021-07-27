@@ -205,9 +205,9 @@ formatKR (List)                 // 숫자 데이터 (한국 단위 변환)
 
 ```javascript
 date (String)                   // 해당년월
-rv (Int)                        // 매출
-oProfit (Int)                   // 영업이익
-nProfit (Int)                   // 순이익
+rv (String)                     // 매출
+oProfit (String)                // 영업이익
+nProfit (String)                // 순이익
 oMargin (Float)                 // 영업이익률
 npMargin (Float)                // 순이익률
 rGrowth (Float)                 // 매출 증가율

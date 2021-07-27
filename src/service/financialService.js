@@ -2,7 +2,7 @@ const axios = require('axios');
 
 const {timeoutLimit} = require('../data/constants.js');
 const {naverFinancialUrl} = require('../tools/urlGenerator.js');
-const {numToKR, round2Deci} = require('../tools/formatter.js');
+const {numToKR} = require('../tools/formatter.js');
 
 axios.defaults.timeout = timeoutLimit;
 
@@ -22,14 +22,14 @@ async function getFinancial(stockId) {
             cd2 = body.chartData2;
             data.push({
                 date: cd1.categories[i],
-                rv: Math.round(cd1.series[0].data[i] * 100000000),
-                oProfit: Math.round(cd1.series[1].data[i] * 100000000),
-                nProfit: Math.round(cd1.series[2].data[i] * 100000000),
-                oMargin: round2Deci(cd1.series[3].data[i]),
-                npMargin: round2Deci(cd1.series[4].data[i]),
-                rGrowth: round2Deci(cd2.series[0].data[i]),
-                opGrowth: round2Deci(cd2.series[1].data[i]),
-                npGrowth: round2Deci(cd2.series[2].data[i])
+                rv: Math.round(cd1.series[0].data[i] * 100000000).toString(),
+                oProfit: Math.round(cd1.series[1].data[i] * 100000000).toString(),
+                nProfit: Math.round(cd1.series[2].data[i] * 100000000).toString(),
+                oMargin: Math.round(cd1.series[3].data[i]),
+                npMargin: Math.round(cd1.series[4].data[i]),
+                rGrowth: Math.round(cd2.series[0].data[i]),
+                opGrowth: Math.round(cd2.series[1].data[i]),
+                npGrowth: Math.round(cd2.series[2].data[i])
             });
             data2.push({
                 date: data[i].date,
