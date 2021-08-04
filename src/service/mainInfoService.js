@@ -127,7 +127,7 @@ async function getRecentReports() {
             item.priceGoal !== '0' ?
                 item.yield = round1Deci((
                     (strToNum(item.priceGoal) / strToNum(item.tradePrice)) - 1) * 100) :
-                item.yield = '-';
+                item.yield = '0';
         }
 
     } catch (err) {

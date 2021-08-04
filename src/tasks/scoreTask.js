@@ -10,6 +10,7 @@ const {naverApiUrl, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
+const ddb = new AWS.DynamoDB();
 axios.defaults.timeout = timeoutLimit;
 
 /**
@@ -60,6 +61,7 @@ async function getIdList() {
  */
 async function saveScore() {
     let body, tmp, stockId;
+    let params;
     const date = new Date().toISOString().slice(0, 10);
     const stockList = await getIdList();
 
@@ -82,6 +84,22 @@ async function saveScore() {
         tmp.popularity = await getPopularity(stockId);
         tmp.financial = await calGFinancial(tmp);
         tmp.score = calScore(tmp);
+
+        if (!isNaN(tmp.score) && tmp.score !== '-') {
+            params = {
+                TableName: 'scoreData',
+                Item: {
+                    stockId: {S: stockId},
+                    score: {S: tmp.score + ''},
+                    date: {S: date}
+                }
+            }
+            ddb.putItem(params, function (err) {
+                if (err) {
+                    console.log('Error ', err);
+                }
+            })
+        }
 
         docClient.update(scoreQuery2(stockId, tmp.score, date), function (err) {
             if (err) {
@@ -335,4 +353,5 @@ function calScore(stockObj) {
 }
 
 saveScore().then();
+
 module.exports = {saveScore};
