@@ -214,7 +214,7 @@ async function getStockOverview(stockId, date) {
     }
     const avgPrice = await getAverage(promises[1][1]);
 
-    if (avgPrice[0] === 'NaN') {
+    if (avgPrice[0].toString() === 'NaN') {
         stockObj.priceAvg = '의견 없음';
         stockObj.expYield = '0';
     } else {
