@@ -2,11 +2,15 @@ const AWS = require('aws-sdk');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-const {region, timeoutLimit} = require('../data/constants.js');
-const {lSectors} = require('../data/wicsDictionary.js');
-const {strToNum} = require('../tools/formatter.js');
-const {scoreQuery, scoreQuery2} = require('../data/queries.js');
-const {naverApiUrl, wiseReportUrl, pastDataUrl} = require('../tools/urlGenerator.js');
+const { region, timeoutLimit } = require('../data/constants.js');
+const { lSectors } = require('../data/wicsDictionary.js');
+const { strToNum } = require('../tools/formatter.js');
+const { scoreQuery, scoreQuery2 } = require('../data/queries.js');
+const {
+    naverApiUrl,
+    wiseReportUrl,
+    pastDataUrl
+} = require('../tools/urlGenerator.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -19,19 +23,23 @@ axios.defaults.timeout = timeoutLimit;
  */
 async function getIdList() {
     let stockList = {};
-    let price, id, query = '';
+    let price,
+        id,
+        query = '';
     let reportList = [];
 
     for (const sector of lSectors) {
-        reportList.push.apply(reportList,
-            (await docClient.query(scoreQuery(sector)).promise()).Items);
+        reportList.push.apply(
+            reportList,
+            (await docClient.query(scoreQuery(sector)).promise()).Items
+        );
     }
 
-    reportList.forEach(item => {
+    reportList.forEach((item) => {
         price = parseInt(item.priceGoal);
         id = item.stockId;
         if (!stockList[id]) {
-            stockList[id] = {stockId: id, count: 1}
+            stockList[id] = { stockId: id, count: 1 };
             if (price !== 0) {
                 stockList[id].price = [price];
                 stockList[id].countPrice = 1;
@@ -48,8 +56,8 @@ async function getIdList() {
     });
     for (let i in stockList) {
         query += stockList[i].stockId + ',';
-        stockList[i].priceAvg = stockList[i].price.reduce(
-            (a, b) => a + b, 0) / stockList[i].price.length;
+        stockList[i].priceAvg =
+            stockList[i].price.reduce((a, b) => a + b, 0) / stockList[i].price.length;
         delete stockList[i].price;
     }
     stockList.query = query;
@@ -66,11 +74,10 @@ async function saveScore() {
     const stockList = await getIdList();
 
     try {
-        body = (await axios.get(naverApiUrl(stockList.query)))
-            .data.result.areas[0].datas;
+        body = (await axios.get(naverApiUrl(stockList.query))).data.result.areas[0]
+            .datas;
         delete stockList.query;
-    } catch (e) {
-    }
+    } catch (e) {}
     for (const item of body) {
         stockId = item.cd;
         console.log('Working on: ' + stockId);
@@ -89,16 +96,16 @@ async function saveScore() {
             params = {
                 TableName: 'scoreData',
                 Item: {
-                    stockId: {S: stockId},
-                    score: {S: tmp.score + ''},
-                    date: {S: date}
+                    stockId: { S: stockId },
+                    score: { S: tmp.score + '' },
+                    date: { S: date }
                 }
-            }
+            };
             ddb.putItem(params, function (err) {
                 if (err) {
                     console.log('Error ', err);
                 }
-            })
+            });
         }
 
         docClient.update(scoreQuery2(stockId, tmp.score, date), function (err) {
@@ -115,11 +122,11 @@ async function saveScore() {
  * @param stockId 6 digit number code of stock
  */
 async function getFinancialData(stockId) {
-    let body, fData = [];
+    let body,
+        fData = [];
     try {
         body = await axios.get(wiseReportUrl(stockId));
-    } catch (e) {
-    }
+    } catch (e) {}
     const $ = cheerio.load(body.data);
     $('tbody tr').map(function () {
         fData.push({
@@ -144,12 +151,12 @@ async function getFinancialData(stockId) {
  */
 async function getPopularity(stockId) {
     let body, tmp;
-    let vData = [], pData = [];
+    let vData = [],
+        pData = [];
     try {
         body = await axios.get(pastDataUrl(stockId, 20, 'day'));
-    } catch (e) {
-    }
-    const $ = cheerio.load(body.data, {xmlMode: true});
+    } catch (e) {}
+    const $ = cheerio.load(body.data, { xmlMode: true });
 
     $('item').each(function () {
         tmp = $(this).attr('data').split('|');
@@ -163,12 +170,13 @@ async function getPopularity(stockId) {
             momentum: {
                 day5: '데이터 부족',
                 day10: '데이터 부족',
-                day20: '데이터 부족',
+                day20: '데이터 부족'
             }
-        }
+        };
     }
 
-    vData = (vData[15] + vData[16] + vData[17] + vData[18] + vData[19]) /
+    vData =
+        (vData[15] + vData[16] + vData[17] + vData[18] + vData[19]) /
         (vData[10] + vData[11] + vData[12] + vData[13] + vData[14]);
 
     return {
@@ -188,12 +196,16 @@ async function getPopularity(stockId) {
 function calGFinancial(stockItem) {
     const item = stockItem.fData;
     try {
-        const peg = stockItem.per /
-            (100 * item[item.length - 1].eps / item[item.length - 2].eps);
-        const niGrowth2yr = (item[item.length - 1].incomeDif +
-            item[item.length - 2].incomeDif + item[item.length - 3].incomeDif) / 3;
-        const niGrowth1yr = (item[item.length - 1].incomeDif +
-            item[item.length - 2].incomeDif) / 2;
+        const peg =
+            stockItem.per /
+            ((100 * item[item.length - 1].eps) / item[item.length - 2].eps);
+        const niGrowth2yr =
+            (item[item.length - 1].incomeDif +
+                item[item.length - 2].incomeDif +
+                item[item.length - 3].incomeDif) /
+            3;
+        const niGrowth1yr =
+            (item[item.length - 1].incomeDif + item[item.length - 2].incomeDif) / 2;
         return {
             peg: peg,
             niGrowth1yr: niGrowth1yr,
@@ -204,7 +216,7 @@ function calGFinancial(stockItem) {
             peg: NaN,
             niGrowth1yr: NaN,
             niGrowth2yr: NaN
-        }
+        };
     }
 }
 
@@ -258,7 +270,7 @@ function calPopScore(stockObj) {
             }
         }
     }
-    stockObj.count > 10 ? report = 100 : report = stockObj.count * 12.5;
+    stockObj.count > 10 ? (report = 100) : (report = stockObj.count * 12.5);
     return (volume + momentum + report) / 3;
 }
 
@@ -274,10 +286,10 @@ function calCredScore(stockObj) {
     let expYield, count;
     if (stockObj.expYield <= 0) return 0;
 
-    stockObj.expYield >= 50 ? expYield = 10 :
-        expYield = Math.abs(stockObj.expYield) / 5;
-    stockObj.countPrice > 10 ? count = 10 :
-        count = stockObj.countPrice;
+    stockObj.expYield >= 50
+        ? (expYield = 10)
+        : (expYield = Math.abs(stockObj.expYield) / 5);
+    stockObj.countPrice > 10 ? (count = 10) : (count = stockObj.countPrice);
 
     const credScore = (expYield + count) * 5;
 
@@ -311,9 +323,9 @@ function calFinScore(stockObj) {
     if (isNaN(financial.peg) || isNaN(niDif)) return '-';
 
     if (financial.peg < 0.5) {
-        pegScore = 100
+        pegScore = 100;
     } else if (financial.peg > 1) {
-        pegScore = 0
+        pegScore = 0;
     } else {
         pegScore = Math.round(financial.peg * 100);
     }
@@ -354,4 +366,4 @@ function calScore(stockObj) {
 
 saveScore().then();
 
-module.exports = {saveScore};
+module.exports = { saveScore };

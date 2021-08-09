@@ -2,10 +2,10 @@ const axios = require('axios');
 const AWS = require('aws-sdk');
 const Iconv = require('iconv-lite');
 
-const {region, timeoutLimit} = require('../data/constants.js');
-const {sectorInfoQuery, getScoreQuery} = require('../data/queries.js');
-const {naverApiUrl} = require('../tools/urlGenerator.js');
-const {round1Deci, numSeparator, strToNum} = require('../tools/formatter.js');
+const { region, timeoutLimit } = require('../data/constants.js');
+const { sectorInfoQuery, getScoreQuery } = require('../data/queries.js');
+const { naverApiUrl } = require('../tools/urlGenerator.js');
+const { round1Deci, numSeparator, strToNum } = require('../tools/formatter.js');
 
 AWS.config.update(region);
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -19,14 +19,18 @@ axios.defaults.timeout = timeoutLimit;
  */
 async function getStockList(sector, date) {
     let body;
-    let sList = [], yList = {}, pList = {}, tmpList = {};
+    let sList = [],
+        yList = {},
+        pList = {},
+        tmpList = {};
     let avgYield = 0.0;
     let stockIds = '';
 
-    const priceList = (await docClient.query(
-        sectorInfoQuery(sector, date)).promise()).Items;
+    const priceList = (
+        await docClient.query(sectorInfoQuery(sector, date)).promise()
+    ).Items;
 
-    priceList.forEach(item => {
+    priceList.forEach((item) => {
         tmpList[item.stockId] = 1;
     });
     for (const [key] of Object.entries(tmpList)) {
@@ -34,8 +38,10 @@ async function getStockList(sector, date) {
     }
 
     try {
-        body = (await axios.get(naverApiUrl(stockIds),
-            {responseEncoding: 'binary', responseType: 'arraybuffer'}));
+        body = await axios.get(naverApiUrl(stockIds), {
+            responseEncoding: 'binary',
+            responseType: 'arraybuffer'
+        });
         body = JSON.parse(Iconv.decode(body.data, 'EUC-KR')).result.areas[0].datas;
     } catch (e) {
         return 'No Data';
@@ -46,13 +52,13 @@ async function getStockList(sector, date) {
             stockName: item.nm,
             stockId: item.cd,
             tradePrice: numSeparator(item.nv),
-            changePrice: item.nv >= item.sv ?
-                numSeparator(item.cv) : numSeparator(-item.cv),
+            changePrice:
+                item.nv >= item.sv ? numSeparator(item.cv) : numSeparator(-item.cv),
             changeRate: item.nv >= item.sv ? item.cr : -item.cr,
             priceAvg: 0,
             pCount: 0,
             count: 0
-        }
+        };
     }
 
     for (const item of priceList) {
@@ -68,9 +74,12 @@ async function getStockList(sector, date) {
     for (const item in pList) {
         if (pList[item].pCount !== 0) {
             sList.push(pList[item]);
-            sList[i].priceAvg = numSeparator(Math.round(sList[i].priceAvg / sList[i].pCount));
-            sList[i].expYield = round1Deci((strToNum(sList[i].priceAvg) /
-                strToNum(sList[i].tradePrice) - 1) * 100);
+            sList[i].priceAvg = numSeparator(
+                Math.round(sList[i].priceAvg / sList[i].pCount)
+            );
+            sList[i].expYield = round1Deci(
+                (strToNum(sList[i].priceAvg) / strToNum(sList[i].tradePrice) - 1) * 100
+            );
             avgYield += sList[i].expYield;
 
             // 각 섹터당 해당하는 종목 추가
@@ -80,8 +89,9 @@ async function getStockList(sector, date) {
             yList[sList[i].sSector][0] += sList[i].expYield;
             yList[sList[i].sSector][1]++;
             try {
-                sList[i].score = (await docClient.query(
-                    getScoreQuery(sList[i].stockId)).promise()).Items[0].score;
+                sList[i].score = (
+                    await docClient.query(getScoreQuery(sList[i].stockId)).promise()
+                ).Items[0].score;
             } catch (e) {
                 sList[i].score = '-';
             }
@@ -97,15 +107,16 @@ async function getStockList(sector, date) {
     sList.avgYield = round1Deci(avgYield / Object.keys(sList).length);
 
     const topList = Object.keys(yList)
-        .sort((a, b) => yList[b] - yList[a]).slice(0, 3);
+        .sort((a, b) => yList[b] - yList[a])
+        .slice(0, 3);
     sList.top3List = {
         first: topList[0],
         firstYield: round1Deci(yList[topList[0]]),
         second: topList[1],
         secondYield: round1Deci(yList[topList[1]]),
         third: topList[2],
-        thirdYield: round1Deci(yList[topList[2]]),
-    }
+        thirdYield: round1Deci(yList[topList[2]])
+    };
 
     return sList;
 }
@@ -141,7 +152,7 @@ async function getSectorOverview(sector, date) {
                 third: '',
                 thirdYield: 0
             }
-        }
+        };
     }
     sectorObj.avgYield = sectorObj.stockList.avgYield;
     sectorObj.top3List = sectorObj.stockList.top3List;
@@ -150,4 +161,4 @@ async function getSectorOverview(sector, date) {
     return sectorObj;
 }
 
-module.exports = {getSectorOverview};
+module.exports = { getSectorOverview };

@@ -1,4 +1,4 @@
-const {numToKorean} = require('num-to-korean');
+const { numToKorean } = require('num-to-korean');
 
 /**
  * Converts number to KR unit
@@ -6,17 +6,19 @@ const {numToKorean} = require('num-to-korean');
  */
 function numToKR(number) {
     number = number.toString().replace('+', '');
-    if (number === '0' ||
-        (number.indexOf('-') !== -1 && number.length < 6)) return '-';
+    if (number === '0' || (number.indexOf('-') !== -1 && number.length < 6))
+        return '-';
 
-    let num, isNegative = false;
+    let num,
+        isNegative = false;
     if (number.indexOf('-') !== -1) {
         isNegative = true;
         number = number.substr(1);
     }
     num = numToKorean(parseInt(number.replace(/,/g, '')), 'mixed');
-    num.indexOf('억') !== -1 ? num = num.substring(0, num.indexOf('억')) + '억'
-        : num = num.substring(0, num.indexOf('만')) + '만';
+    num.indexOf('억') !== -1
+        ? (num = num.substring(0, num.indexOf('억')) + '억')
+        : (num = num.substring(0, num.indexOf('만')) + '만');
 
     if (isNegative) {
         return '-' + num;
@@ -67,4 +69,11 @@ function numSeparator(num) {
     }
 }
 
-module.exports = {numToKR, strToNum, round1Deci, round2Deci, getPastDate, numSeparator};
+module.exports = {
+    numToKR,
+    strToNum,
+    round1Deci,
+    round2Deci,
+    getPastDate,
+    numSeparator
+};

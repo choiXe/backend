@@ -1,8 +1,8 @@
 const axios = require('axios');
 
-const {timeoutLimit} = require('../data/constants.js');
-const {naverFinancialUrl} = require('../tools/urlGenerator.js');
-const {numToKR} = require('../tools/formatter.js');
+const { timeoutLimit } = require('../data/constants.js');
+const { naverFinancialUrl } = require('../tools/urlGenerator.js');
+const { numToKR } = require('../tools/formatter.js');
 
 axios.defaults.timeout = timeoutLimit;
 
@@ -12,7 +12,9 @@ axios.defaults.timeout = timeoutLimit;
  * @param stockId 6 digit number code
  */
 async function getFinancial(stockId) {
-    let body, data = [], data2 = [];
+    let body,
+        data = [],
+        data2 = [];
     let cd1, cd2;
 
     try {
@@ -35,15 +37,14 @@ async function getFinancial(stockId) {
                 date: data[i].date,
                 rvKR: numToKR(data[i].rv).replace('+', ''),
                 oProfitKR: numToKR(data[i].oProfit).replace('+', ''),
-                nProfitKR: numToKR(data[i].nProfit).replace('+', ''),
-            })
+                nProfitKR: numToKR(data[i].nProfit).replace('+', '')
+            });
         }
-    } catch (e) {
-    }
+    } catch (e) {}
     return {
         data: data,
         formatKR: data2
     };
 }
 
-module.exports = {getFinancial};
+module.exports = { getFinancial };

@@ -2,10 +2,18 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const Iconv = require('iconv-lite');
 
-const {timeoutLimit} = require('../data/constants.js');
-const {round2Deci, round1Deci, numSeparator, strToNum} = require('../tools/formatter.js');
+const { timeoutLimit } = require('../data/constants.js');
 const {
-    indicatorUrlKR, indicatorUrlGlobal, hankyungUrl, naverApiUrl
+    round2Deci,
+    round1Deci,
+    numSeparator,
+    strToNum
+} = require('../tools/formatter.js');
+const {
+    indicatorUrlKR,
+    indicatorUrlGlobal,
+    hankyungUrl,
+    naverApiUrl
 } = require('../tools/urlGenerator.js');
 
 axios.defaults.timeout = timeoutLimit;
@@ -14,16 +22,17 @@ axios.defaults.timeout = timeoutLimit;
  * Returns korea market indicators
  */
 async function getKRIndicator() {
-    let body, kIndicators = [];
+    let body,
+        kIndicators = [];
     const name = {
-        'KOSPI': '코스피',
-        'KOSDAQ': '코스닥',
-        'KPI200': '코스피 200'
+        KOSPI: '코스피',
+        KOSDAQ: '코스닥',
+        KPI200: '코스피 200'
     };
 
     try {
         body = (await axios.get(indicatorUrlKR())).data.result.areas[0].datas;
-        body.forEach(item => {
+        body.forEach((item) => {
             kIndicators.push({
                 name: name[item.cd],
                 tradePrice: numSeparator(item.nv / 100),
@@ -41,7 +50,8 @@ async function getKRIndicator() {
  * Returns global market indicators
  */
 async function getGlobalIndicator() {
-    let body, gIndicators = [];
+    let body,
+        gIndicators = [];
     let price, changePrice;
     const name = {
         '000001.SS': '상해 종합',
@@ -56,16 +66,14 @@ async function getGlobalIndicator() {
 
     try {
         body = (await axios.get(indicatorUrlGlobal())).data.spark.result;
-        body.forEach(item => {
+        body.forEach((item) => {
             price = item.response[0].meta.regularMarketPrice;
             changePrice = item.response[0].meta.previousClose;
             gIndicators.push({
                 name: name[item.symbol],
                 tradePrice: numSeparator(round2Deci(price)),
-                changePrice:
-                    numSeparator(round2Deci(price - changePrice)),
-                changeRate:
-                    round2Deci(100 * (price - changePrice) / price)
+                changePrice: numSeparator(round2Deci(price - changePrice)),
+                changeRate: round2Deci((100 * (price - changePrice)) / price)
             });
         });
     } catch (e) {
@@ -78,11 +86,14 @@ async function getGlobalIndicator() {
  * Returns 10 reports that are published recently
  */
 async function getRecentReports() {
-    let body, reportList = [], reportObj;
-    let stockIds = '', pList = {};
+    let body,
+        reportList = [],
+        reportObj;
+    let stockIds = '',
+        pList = {};
 
     try {
-        body = await axios.get(hankyungUrl(10), {responseType: 'arraybuffer'});
+        body = await axios.get(hankyungUrl(10), { responseType: 'arraybuffer' });
         const $ = cheerio.load(Iconv.decode(body.data, 'EUC-KR'));
 
         $('.table_style01 tbody tr').each(function () {
@@ -91,22 +102,24 @@ async function getRecentReports() {
             if (elem.find('td:nth-child(7) > div > a').attr('href') != null) {
                 let original = elem.find('strong').text();
                 if (original.indexOf('(') === -1 || original.indexOf(')') === -1) {
-                    console.log("Parsing unavailable > " + original);
+                    console.log('Parsing unavailable > ' + original);
                 } else {
                     reportObj = {};
                     reportObj['date'] = elem.find('td.first.txt_number').text();
                     reportObj['stockName'] = original.split('(')[0];
                     reportObj['stockId'] = original.split('(')[1].split(')')[0];
 
-                    if (reportObj['stockId'].length === 6
-                        && !isNaN(reportObj['stockId'])
-                        && reportObj['stockName'].length <= 20) {
-
+                    if (
+                        reportObj['stockId'].length === 6 &&
+                        !isNaN(reportObj['stockId']) &&
+                        reportObj['stockName'].length <= 20
+                    ) {
                         reportObj['reportName'] = original.split(')')[1];
-                        reportObj['priceGoal'] =
-                            elem.find('td.text_r.txt_number').text();
-                        reportObj['reportIdx'] =
-                            elem.find('td.text_l > div > div').attr('id').substr(8, 6);
+                        reportObj['priceGoal'] = elem.find('td.text_r.txt_number').text();
+                        reportObj['reportIdx'] = elem
+                            .find('td.text_l > div > div')
+                            .attr('id')
+                            .substr(8, 6);
 
                         reportList.push(reportObj);
                         stockIds += reportObj.stockId + ',';
@@ -120,16 +133,16 @@ async function getRecentReports() {
             pList[item.cd] = {
                 stockId: item.cd,
                 tradePrice: numSeparator(item.nv)
-            }
+            };
         }
         for (const item of reportList) {
             item.tradePrice = pList[item.stockId].tradePrice;
-            item.priceGoal !== '0' ?
-                item.yield = round1Deci((
-                    (strToNum(item.priceGoal) / strToNum(item.tradePrice)) - 1) * 100) :
-                item.yield = '0';
+            item.priceGoal !== '0'
+                ? (item.yield = round1Deci(
+                (strToNum(item.priceGoal) / strToNum(item.tradePrice) - 1) * 100
+                ))
+                : (item.yield = '0');
         }
-
     } catch (err) {
         console.log('[mainInfoService]: Error in getRecentReports');
     }
@@ -144,14 +157,13 @@ async function getMainOverview() {
     promises = [getKRIndicator(), getGlobalIndicator(), getRecentReports()];
     try {
         promises = await Promise.all(promises);
-    } catch (e) {
-    }
+    } catch (e) {}
 
     return {
         kr: promises[0],
         global: promises[1],
         reports: promises[2]
-    }
+    };
 }
 
-module.exports = {getMainOverview};
+module.exports = { getMainOverview };

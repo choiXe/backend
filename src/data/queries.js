@@ -1,4 +1,4 @@
-const {getPastDate} = require('../tools/formatter.js');
+const { getPastDate } = require('../tools/formatter.js');
 
 /**
  * Query for stockInfoService.js
@@ -7,8 +7,9 @@ const {getPastDate} = require('../tools/formatter.js');
 function stockInfoQuery(stockId) {
     return {
         TableName: 'reportListComplete',
-        IndexName: "stockId-date-index",
-        ProjectionExpression: '#dt, reportName, analyst, priceGoal, firm, reportIdx',
+        IndexName: 'stockId-date-index',
+        ProjectionExpression:
+            '#dt, reportName, analyst, priceGoal, firm, reportIdx',
         KeyConditionExpression: '#id = :id and #dt >= :date',
         ExpressionAttributeNames: {
             '#id': 'stockId',
@@ -77,7 +78,7 @@ function scoreQuery2(stockId, score, date) {
     return {
         TableName: 'stockScore',
         Key: {
-            'stockId': stockId
+            stockId: stockId
         },
         UpdateExpression: 'set #score = :score, #dt = :date',
         ExpressionAttributeNames: {
@@ -88,7 +89,7 @@ function scoreQuery2(stockId, score, date) {
             ':score': score,
             ':date': date
         }
-    }
+    };
 }
 
 /**
@@ -111,6 +112,9 @@ function getScoreQuery(stockId) {
 }
 
 module.exports = {
-    stockInfoQuery, sectorInfoQuery,
-    scoreQuery, scoreQuery2, getScoreQuery
+    stockInfoQuery,
+    sectorInfoQuery,
+    scoreQuery,
+    scoreQuery2,
+    getScoreQuery
 };
